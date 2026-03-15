@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>專屬空間沙龍 - 黑金1號 (Physical Liquid)</title>
+    <title>專屬空間沙龍 - 黑金1號 (iOS 26 Native Liquid)</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,37 +15,45 @@
 
     <style>
         :root {
-            --primary: #464646;
+            --primary: #1C1C1E;        /* iOS 系統文字黑 */
             --accent: #D4AF37;
-            --bg-base: #F5F5F7;
+            --bg-ios: #F2F2F7;         /* iOS 系統標準底色：微灰 */
         }
 
         body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background: var(--bg-base);
+            font-family: -apple-system, 'Noto Sans TC', sans-serif;
+            background: var(--bg-ios);
             margin: 0;
             overflow: hidden;
         }
 
-        /* --- 核心：液態水晶物理指示器 --- */
+        /* --- 核心：iOS 原生感液態玻璃 --- */
         .glass-indicator {
             position: absolute;
-            background: rgba(255, 255, 255, 0.6);
+            /* 讓背景更通透：低透明度白 + 高飽和模糊 */
+            background: rgba(255, 255, 255, 0.45); 
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.8);
+            
+            /* 極細高亮邊框，模擬玻璃邊緣折射 */
+            border: 0.5px solid rgba(255, 255, 255, 0.7);
             border-radius: 1.25rem;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.05), inset 0 0 10px rgba(255,255,255,0.5);
-            /* 物理卡入動畫：貝茲曲線決定了它會「彈」一下 */
-            transition: all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.2);
+            
+            /* iOS 專屬的高級感陰影 */
+            box-shadow: 
+                0 4px 12px rgba(0,0,0,0.03), 
+                0 8px 30px rgba(0,0,0,0.05);
+            
+            /* 物理卡入動畫 */
+            transition: all 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.2);
             z-index: 0;
             pointer-events: none;
         }
 
-        /* 點擊時的壓縮感 (Active) */
+        /* 物理壓縮反饋 */
         .is-pressing {
-            transform: scale(0.92) translateY(2px);
-            background: rgba(255, 255, 255, 0.8);
+            transform: scale(0.94) translateY(1px);
+            background: rgba(255, 255, 255, 0.6);
             transition: transform 0.1s ease;
         }
 
@@ -53,16 +61,17 @@
             position: relative;
             z-index: 1;
             background: transparent;
-            transition: color 0.3s ease;
+            color: #8E8E93; /* iOS 系統灰色文字 */
+            transition: all 0.3s ease;
         }
 
         .active-text {
             color: #000 !important;
-            font-weight: 900;
+            font-weight: 700;
         }
 
         .text-gold-gradient {
-            background: linear-gradient(90deg, #b8860b, #D4AF37, #b8860b);
+            background: linear-gradient(135deg, #b8860b, #D4AF37, #fdf5e6, #D4AF37);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
 
@@ -85,7 +94,6 @@
 
             const menuItems = ['開單', '查單', '報表', '顧客', '庫存', '人員', '系統'];
 
-            // 物理吸附邏輯：計算當前選中按鈕的位置
             useEffect(() => {
                 const activeBtn = btnRefs.current[activeTab];
                 if (activeBtn) {
@@ -98,19 +106,17 @@
                 }
             }, [activeTab]);
 
-            const formatCurrency = (n) => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(n);
-
             return (
-                <div className="flex h-screen w-screen overflow-hidden bg-[#F5F5F7]">
-                    {/* 側邊欄 */}
-                    <aside style={{ minWidth: '120px' }} className="flex flex-col w-24 hover:w-64 bg-white/40 border-r border-gray-200 shadow-sm transition-all duration-300 group overflow-hidden flex-shrink-0 relative">
-                        <div className="p-6 h-20 border-b border-gray-100 flex items-center gap-4 relative z-10">
-                            <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-[#D4AF37] font-black text-xl">S</div>
-                            <span className="font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Salon POS</span>
+                <div className="flex h-screen w-screen overflow-hidden bg-[#F2F2F7]">
+                    {/* 側邊欄：高級微灰質感 */}
+                    <aside style={{ minWidth: '120px' }} className="flex flex-col w-24 hover:w-64 bg-white/20 border-r border-gray-200/50 backdrop-blur-md transition-all duration-300 group overflow-hidden flex-shrink-0 relative">
+                        <div className="p-6 h-20 border-b border-gray-200/30 flex items-center gap-4 relative z-10">
+                            <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-[#D4AF37] font-black text-xl shadow-lg">S</div>
+                            <span className="font-bold text-[#1C1C1E] opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Salon POS</span>
                         </div>
 
                         <nav className="flex-1 p-4 space-y-2 relative">
-                            {/* 那塊會動的水滴背景 */}
+                            {/* 核心液態玻璃方塊 */}
                             <div 
                                 className={`glass-indicator ${isPressing ? 'is-pressing' : ''}`}
                                 style={{
@@ -128,31 +134,35 @@
                                     onPointerDown={() => setIsPressing(true)}
                                     onPointerUp={() => setIsPressing(false)}
                                     onClick={() => setActiveTab(item)}
-                                    className={`w-full py-4 px-4 rounded-2xl flex items-center gap-4 menu-btn ${activeTab === item ? 'active-text' : 'text-gray-400'}`}
+                                    className={`w-full py-4 px-4 rounded-2xl flex items-center gap-4 menu-btn ${activeTab === item ? 'active-text' : ''}`}
                                 >
-                                    <div className="w-6 h-6 bg-current opacity-20 rounded-md"></div>
-                                    <span className="opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap">{item}</span>
+                                    {/* 圖標預留位 */}
+                                    <div className={`w-6 h-6 rounded-md ${activeTab === item ? 'bg-[#D4AF37]/20' : 'bg-gray-300/30'}`}></div>
+                                    <span className="opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap font-medium">{item}</span>
                                 </button>
                             ))}
                         </nav>
                     </aside>
 
-                    {/* 主區域 */}
+                    {/* 主區域：保持通透感 */}
                     <main className="flex-1 p-6 flex flex-col gap-6 overflow-hidden animate-fade-in">
-                        <div className="flex-1 bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] p-10 overflow-y-auto hide-scrollbar">
-                            <h2 className="text-4xl font-black text-gold-gradient mb-8">{activeTab}管理</h2>
-                            <div className="p-20 text-center text-gray-300 font-black text-2xl border-2 border-dashed border-gray-100 rounded-[2rem]">
-                                {activeTab} 模組開發中...
+                        <div className="flex-1 bg-white/50 backdrop-blur-2xl border border-white/80 rounded-[2.5rem] p-10 shadow-sm relative overflow-hidden">
+                             {/* 增加一點背景光感，讓玻璃效果更明顯 */}
+                             <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#D4AF37]/10 blur-[80px] rounded-full"></div>
+                             
+                            <h2 className="text-4xl font-black text-gold-gradient mb-8 tracking-tight">{activeTab}管理</h2>
+                            <div className="p-20 text-center text-gray-400 font-bold text-xl border-2 border-dashed border-gray-200/50 rounded-[2.5rem]">
+                                {activeTab} 模組打磨中...
                             </div>
                         </div>
                         
-                        <div className="h-[150px] bg-white/80 backdrop-blur-xl border border-white rounded-[2.5rem] p-10 flex items-center justify-between">
+                        <div className="h-[150px] bg-white/60 backdrop-blur-2xl border border-white/80 rounded-[2.5rem] p-10 flex items-center justify-between">
                             <div className="flex flex-col">
-                                <span className="text-gray-400 font-bold text-sm uppercase">Quick Action</span>
-                                <span className="text-4xl font-black text-gold-gradient">等待指令打磨...</span>
+                                <span className="text-gray-400 font-bold text-sm uppercase tracking-widest">System Status</span>
+                                <span className="text-3xl font-black text-[#1C1C1E]">iOS 26 Liquid Glass Ready</span>
                             </div>
-                            <button className="bg-black text-[#D4AF37] px-12 py-5 rounded-[1.5rem] text-xl font-black shadow-xl active:scale-95 transition-all">
-                                點擊測試
+                            <button className="bg-[#1C1C1E] text-[#D4AF37] px-12 py-5 rounded-[1.5rem] text-xl font-black shadow-xl active:scale-95 transition-all">
+                                執行指令
                             </button>
                         </div>
                     </main>
