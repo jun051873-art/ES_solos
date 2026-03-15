@@ -2,220 +2,166 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>在幹嘛 1 號 - 最終定稿</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專屬空間沙龍 - 黑金1號 (Physical Liquid)</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <style>
-        :root { --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom); }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #fff; font-family: -apple-system, BlinkMacSystemFont, sans-serif; overflow: hidden; }
-        * { -webkit-tap-highlight-color: transparent; outline: none !important; -webkit-user-select: none; box-sizing: border-box; }
-        input { -webkit-user-select: auto; }
+        :root {
+            --primary: #464646;
+            --accent: #D4AF37;
+            --bg-base: #F5F5F7;
+        }
 
-        /* 唯美浮現訊息 */
-        #etherealToast { position: fixed; top: 46dvh; left: 50%; transform: translateX(-50%); color: #3a3a3c; font-size: 17px; font-weight: 200; letter-spacing: 5px; opacity: 0; transition: 1s; z-index: 9999; pointer-events: none; }
-        #etherealToast.active { opacity: 0.7; transform: translateX(-50%) translateY(-25px); }
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: var(--bg-base);
+            margin: 0;
+            overflow: hidden;
+        }
 
-        /* Splash 標語層 */
-        #splashLayer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 9998; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: 0.6s; }
-        #splashLayer.active { opacity: 1; pointer-events: all; }
-        #splashLayer h2 { font-size: 19px; font-weight: 200; letter-spacing: 6px; color: #1c1c1e; animation: textBreath 2.4s ease-in-out forwards; }
-        @keyframes textBreath { 0% { opacity: 0; filter: blur(10px); } 30% { opacity: 1; filter: blur(0); } 75% { opacity: 1; } 100% { opacity: 0; } }
+        /* --- 核心：液態水晶物理指示器 --- */
+        .glass-indicator {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 1.25rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.05), inset 0 0 10px rgba(255,255,255,0.5);
+            /* 物理卡入動畫：貝茲曲線決定了它會「彈」一下 */
+            transition: all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.2);
+            z-index: 0;
+            pointer-events: none;
+        }
 
-        /* 縱向物理架構 */
-        .main-container { width: 100%; height: 500%; display: flex; flex-direction: column; transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-        .page { width: 100%; height: 20%; position: relative; display: flex; flex-direction: column; align-items: center; padding-top: calc(10dvh + var(--safe-top)); overflow: hidden; }
-        h1 { font-size: 32px; letter-spacing: 14px; font-weight: 300; margin: 0; color: #1c1c1e; text-align: center; }
+        /* 點擊時的壓縮感 (Active) */
+        .is-pressing {
+            transform: scale(0.92) translateY(2px);
+            background: rgba(255, 255, 255, 0.8);
+            transition: transform 0.1s ease;
+        }
 
-        /* 指示點 */
-        .dots-container { position: fixed; left: 22px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 15px; z-index: 1000; }
-        .dot { width: 3px; height: 3px; background: #d2d2d7; border-radius: 50%; transition: 0.4s; }
-        .dot.active { background: #1c1c1e; transform: scale(2.5); }
+        .menu-btn {
+            position: relative;
+            z-index: 1;
+            background: transparent;
+            transition: color 0.3s ease;
+        }
 
-        /* 透視：氣泡與能量條整合 */
-        .galaxy-stage { width: 100%; height: 32dvh; position: relative; display: flex; align-items: center; justify-content: center; margin-top: 5dvh; overflow: visible; }
-        .sphere { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-align: center; border: 1px solid rgba(0,0,0,0.03); animation: bubbleFloat var(--b-dur) infinite ease-in-out; }
-        @keyframes bubbleFloat { 0%, 100% { transform: translate(0, 0) scale(1); } 33% { transform: translate(var(--b-x), var(--b-y)) scale(1.04); } 66% { transform: translate(calc(var(--b-x) * -0.7), calc(var(--b-y) * 1.1)) scale(0.98); } }
+        .active-text {
+            color: #000 !important;
+            font-weight: 900;
+        }
 
-        .insight-card { width: 82%; background: #f5f5f7; border-radius: 25px; padding: 25px; margin-top: 6dvh; text-align: center; }
-        .percentage-bar-container { height: 6px; width: 100%; background: #e5e5e7; border-radius: 3px; margin: 15px 0; overflow: hidden; display: flex; }
-        .bar-work { background: #0071e3; height: 100%; transition: 1.5s; }
-        .bar-life { background: #34c759; height: 100%; transition: 1.5s; }
-        .bar-mood { background: #ff3b30; height: 100%; transition: 1.5s; }
-        .stat-label { font-size: 11px; font-weight: 600; color: #86868b; display: flex; justify-content: space-between; }
+        .text-gold-gradient {
+            background: linear-gradient(90deg, #b8860b, #D4AF37, #b8860b);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
 
-        /* 回憶頁視覺：灰底心情、黑底日期 */
-        .memory-area { width: 82%; overflow-y: auto; height: 65dvh; border-left: 1.2px solid #f2f2f7; padding-left: 24px; margin-top: 2vh; }
-        .date-anchor { position: relative; font-size: 11px; font-weight: 600; margin: 40px 0 24px -24px; padding: 4px 10px; background: #2c2c2e; color: #fff; border-radius: 4px; display: inline-block; }
-        .weather-active-label, .custom-active-label { background: #f2f2f7; color: #8e8e93; padding: 2px 8px; border-radius: 4px; font-size: 10px; margin-left: 6px; border: 0.5px solid #e5e5ea; }
-        .weather-btn { background: transparent; border: none; padding: 6px 8px; font-size: 12px; color: #aeaeb2; cursor: pointer; }
-
-        /* 月曆選單 */
-        #timeMachine { position: absolute; top: 16dvh; width: 88%; background: rgba(255,255,255,0.98); border-radius: 30px; z-index: 2000; display: none; padding: 20px; backdrop-filter: blur(25px); box-shadow: 0 20px 50px rgba(0,0,0,0.1); }
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; text-align: center; }
-        .cal-day { font-size: 14px; padding: 10px 0; border-radius: 12px; position: relative; cursor: pointer; color: #1c1c1e; }
-        .heat-dot { width: 3px; height: 3px; background: #8e8e93; border-radius: 50%; display: inline-block; margin: 0 1px; }
-
-        /* 標籤樣式 */
-        .input-section { position: absolute; bottom: calc(12dvh + var(--safe-bottom)); display: flex; align-items: center; border-bottom: 2px solid #2c2c2e; padding: 6px; background: #fff; z-index: 100; }
-        .square-tag { width: 75px; height: 75px; border-radius: 20px; border: 0.8px solid #eee; margin: 8px; background: #fbfbfb; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
-        .square-tag.selected { background: #1c1c1e; color: #fff; border: none; transform: scale(1.05); }
-        .pill-tag { padding: 13px 30px; border-radius: 40px; background: #1c1c1e; color: #fff; border: none; font-size: 15px; margin: 9px; cursor: pointer; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .animate-fade-in { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
-<div id="etherealToast"></div>
-<div id="splashLayer"></div>
-<div class="dots-container"><div id="dot0" class="dot"></div><div id="dot1" class="dot"></div><div id="dot2" class="dot"></div><div id="dot3" class="dot"></div><div id="dot4" class="dot"></div></div>
+    <div id="root"></div>
 
-<div class="main-container" id="mainContainer">
-    <section class="page"><h1>現在在幹嘛</h1><div id="stage0" style="display:flex; flex-wrap:wrap; justify-content:center; width:90%; margin-top:4vh;"></div><div class="input-section"><input type="text" id="userInput" style="border:none;width:180px;text-align:center;font-size:17px" placeholder="此刻心情..."><button id="sendBtn" style="background:#1c1c1e;color:#fff;border:none;border-radius:50%;width:34px;height:34px">↑</button></div></section>
-    <section class="page"><h1>標籤</h1><p style="font-size: 12px; color: #ddd; margin: 15px 0;">點擊切換 · 長按刪除</p><div id="stage1" style="display:flex; flex-wrap:wrap; justify-content:center; width:90%;"></div><div class="input-section"><input type="text" id="newTagInput" style="border:none;width:180px;text-align:center;font-size:16px" placeholder="新增標籤..."><button id="addTagBtn" style="background:#000;color:#fff;border:none;border-radius:50%;width:32px;height:32px">＋</button></div></section>
-    
-    <section class="page">
-        <h1>透視</h1>
-        <div id="stage2" class="galaxy-stage"></div>
-        <div class="insight-card">
-            <div style="font-size: 14px; font-weight: 700; margin-bottom: 5px;">能量分佈</div>
-            <div class="percentage-bar-container">
-                <div id="workBar" class="bar-work" style="width: 0%"></div>
-                <div id="lifeBar" class="bar-life" style="width: 0%"></div>
-                <div id="moodBar" class="bar-mood" style="width: 0%"></div>
-            </div>
-            <div class="stat-label"><span>工作產出</span><span>生活能量</span><span>情緒脈絡</span></div>
-        </div>
-    </section>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
 
-    <section class="page"><h1 style="display:flex; align-items: baseline; justify-content: center;">回憶<span id="tmBtn" style="font-size: 11px; color: #aeaeb2; cursor:pointer; font-weight: 300; letter-spacing: -0.5px;">時光機▼</span></h1><div id="timeMachine"><div style="display:flex;justify-content:space-between;margin-bottom:15px;"><button id="prevM" style="border:none;background:none;font-size:18px;">‹</button><div id="calTitle" style="font-weight:600;"></div><button id="nextM" style="border:none;background:none;font-size:18px;">›</button></div><div class="cal-grid" id="calGrid"></div></div><div id="memoryArea" class="memory-area"></div></section>
-    <section class="page"><h1>設定</h1><div id="quoteEditor" style="width: 82%; margin-top: 5vh; max-height: 45dvh; overflow-y: auto;"></div><p style="margin-top:30px; font-size:11px; color:#ddd; text-align:center;">長按紀錄條目可局部刪除</p></section>
-</div>
+        const HairSalonApp = () => {
+            const [activeTab, setActiveTab] = useState('開單');
+            const [indicatorStyle, setIndicatorStyle] = useState({ top: 0, height: 0, width: 0, left: 0 });
+            const [isPressing, setIsPressing] = useState(false);
+            const btnRefs = useRef({});
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, updateDoc, doc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    
-    const firebaseConfig = { apiKey: "AIzaSyAt3NMGtToRrMbau8kIYyOybgIvH65a8rA", authDomain: "now-doing.firebaseapp.com", projectId: "now-doing", storageBucket: "now-doing.firebasestorage.app", messagingSenderId: "234295652644", appId: "1:234295652644:web:c9b3c37de32d9448d443b1" };
-    const db = getFirestore(initializeApp(firebaseConfig));
+            const menuItems = ['開單', '查單', '報表', '顧客', '庫存', '人員', '系統'];
 
-    let tags = JSON.parse(localStorage.getItem('myPills')) || [{ name: '☕ 休息', selected: true, count: 0 }, { name: '💇 工作', selected: true, count: 0 }];
-    let quotes = JSON.parse(localStorage.getItem('myQuotes')) || ["：（多久沒問問自己了呢）", "每個都可以是你", "接受不完美的自己", "你值得擁有", "詩人 你也可以"];
-    let viewDate = new Date(); let logsCache = []; let cur = 0;
+            // 物理吸附邏輯：計算當前選中按鈕的位置
+            useEffect(() => {
+                const activeBtn = btnRefs.current[activeTab];
+                if (activeBtn) {
+                    setIndicatorStyle({
+                        top: activeBtn.offsetTop,
+                        left: activeBtn.offsetLeft,
+                        width: activeBtn.offsetWidth,
+                        height: activeBtn.offsetHeight
+                    });
+                }
+            }, [activeTab]);
 
-    function showToast(msg) { const t = document.getElementById('etherealToast'); t.innerText = msg; t.classList.add('active'); setTimeout(() => t.classList.remove('active'), 2000); }
+            const formatCurrency = (n) => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(n);
 
-    const triggerSplash = (idx) => {
-        const s = document.getElementById('splashLayer'); s.innerHTML = `<h2>${quotes[idx]}</h2>`; s.classList.add('active');
-        setTimeout(() => {
-            document.getElementById('mainContainer').style.transform = `translateY(-${idx * 20}%)`;
-            document.querySelectorAll('.dot').forEach((d,i) => d.className = i === idx ? 'dot active' : 'dot');
-            if(idx === 2) loadInsight(); if(idx === 3) loadMemories();
-        }, 1200);
-        setTimeout(() => s.classList.remove('active'), 2600);
-    };
+            return (
+                <div className="flex h-screen w-screen overflow-hidden bg-[#F5F5F7]">
+                    {/* 側邊欄 */}
+                    <aside style={{ minWidth: '120px' }} className="flex flex-col w-24 hover:w-64 bg-white/40 border-r border-gray-200 shadow-sm transition-all duration-300 group overflow-hidden flex-shrink-0 relative">
+                        <div className="p-6 h-20 border-b border-gray-100 flex items-center gap-4 relative z-10">
+                            <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-[#D4AF37] font-black text-xl">S</div>
+                            <span className="font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Salon POS</span>
+                        </div>
 
-    /* 💡 修復點擊：顯式調用函數 */
-    window.handleTagClick = async (tagName) => {
-        await addDoc(collection(db, "daily_logs"), { action: tagName, type: 'tag', weather: '曬', isCustom: false, timestamp: serverTimestamp() });
-        showToast('已紀錄');
-        loadInsight();
-    };
+                        <nav className="flex-1 p-4 space-y-2 relative">
+                            {/* 那塊會動的水滴背景 */}
+                            <div 
+                                className={`glass-indicator ${isPressing ? 'is-pressing' : ''}`}
+                                style={{
+                                    top: `${indicatorStyle.top}px`,
+                                    left: `${indicatorStyle.left}px`,
+                                    width: `${indicatorStyle.width}px`,
+                                    height: `${indicatorStyle.height}px`
+                                }}
+                            ></div>
 
-    window.saveAction = async (t, v, isCust) => {
-        const val = t === 'input' ? document.getElementById('userInput').value : v; if(!val) return;
-        await addDoc(collection(db, "daily_logs"), { action: val, type: t, weather: t==='input'?'':(v||'曬'), isCustom: isCust||false, timestamp: serverTimestamp() });
-        showToast(t === 'input' || isCust ? '已珍藏' : '已紀錄');
-        if(t === 'input') document.getElementById('userInput').value = ''; renderAll();
-    };
+                            {menuItems.map(item => (
+                                <button 
+                                    key={item}
+                                    ref={el => btnRefs.current[item] = el}
+                                    onPointerDown={() => setIsPressing(true)}
+                                    onPointerUp={() => setIsPressing(false)}
+                                    onClick={() => setActiveTab(item)}
+                                    className={`w-full py-4 px-4 rounded-2xl flex items-center gap-4 menu-btn ${activeTab === item ? 'active-text' : 'text-gray-400'}`}
+                                >
+                                    <div className="w-6 h-6 bg-current opacity-20 rounded-md"></div>
+                                    <span className="opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap">{item}</span>
+                                </button>
+                            ))}
+                        </nav>
+                    </aside>
 
-    window.loadMemories = async () => {
-        const snap = await getDocs(query(collection(db, "daily_logs"), orderBy("timestamp", "desc")));
-        logsCache = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(d => d.action);
-        const area = document.getElementById('memoryArea'); area.innerHTML = ''; let lastDate = "";
-        logsCache.forEach(d => {
-            if(d.type === 'input') {
-                const date = d.timestamp ? d.timestamp.toDate() : new Date();
-                const dStr = `${date.getMonth()+1}月${date.getDate()}日 週${['日','一','二','三','四','五','六'][date.getDay()]}`;
-                if(dStr !== lastDate) { area.innerHTML += `<div id="date-${date.getMonth()+1}月${date.getDate()}日" class="date-anchor">${dStr}</div>`; lastDate = dStr; }
-                const div = document.createElement('div'); div.className = 'memory-item';
-                div.innerHTML = `<div style="font-size:11px; color:#aeaeb2; margin-bottom:6px;">${date.getHours()}:${String(date.getMinutes()).padStart(2,'0')} <span class="${d.isCustom ? 'custom-active-label' : 'weather-active-label'}">${d.weather || ''}</span></div><div class="content-main" style="font-size:18px; font-weight:600; color:#2c2c2e; line-height:1.6; margin-bottom:12px;">${d.action}</div><div class="w-btn-row"></div><div style="display:flex;align-items:center;margin-top:8px;"><input type="text" id="cust-${d.id}" style="border:none; border-bottom:0.5px solid #f2f2f7; font-size:14px; width:110px;" placeholder="制定心情..."><button class="c-btn" style="background:#000;color:#fff;border:none;border-radius:6px;padding:3px 8px;font-size:10px;margin-left:8px;">確定</button></div>`;
-                area.appendChild(div);
-                const row = div.querySelector('.w-btn-row');
-                ['晴','陰','雨','風','雪','曬'].forEach(w => { const b = document.createElement('button'); b.className='weather-btn'; b.innerText=w; b.onclick=(e)=>{e.stopPropagation(); window.updW(d.id,w,false)}; row.appendChild(b); });
-                div.querySelector('.c-btn').onclick=(e)=>{e.stopPropagation(); window.updW(d.id, document.getElementById('cust-'+d.id).value, true)};
-                let delTimer; div.onmousedown = () => delTimer = setTimeout(() => { if(confirm('刪除紀錄？')){ deleteDoc(doc(db,"daily_logs",d.id)); window.loadMemories(); }}, 1000);
-                div.onmouseup = () => clearTimeout(delTimer); div.ontouchstart = div.onmousedown; div.ontouchend = div.onmouseup;
-            }
-        });
-        window.renderCalendar();
-    };
+                    {/* 主區域 */}
+                    <main className="flex-1 p-6 flex flex-col gap-6 overflow-hidden animate-fade-in">
+                        <div className="flex-1 bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] p-10 overflow-y-auto hide-scrollbar">
+                            <h2 className="text-4xl font-black text-gold-gradient mb-8">{activeTab}管理</h2>
+                            <div className="p-20 text-center text-gray-300 font-black text-2xl border-2 border-dashed border-gray-100 rounded-[2rem]">
+                                {activeTab} 模組開發中...
+                            </div>
+                        </div>
+                        
+                        <div className="h-[150px] bg-white/80 backdrop-blur-xl border border-white rounded-[2.5rem] p-10 flex items-center justify-between">
+                            <div className="flex flex-col">
+                                <span className="text-gray-400 font-bold text-sm uppercase">Quick Action</span>
+                                <span className="text-4xl font-black text-gold-gradient">等待指令打磨...</span>
+                            </div>
+                            <button className="bg-black text-[#D4AF37] px-12 py-5 rounded-[1.5rem] text-xl font-black shadow-xl active:scale-95 transition-all">
+                                點擊測試
+                            </button>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
 
-    window.loadInsight = async () => {
-        const snap = await getDocs(collection(db, "daily_logs"));
-        const counts = {}; let w=0, l=0, m=0;
-        snap.forEach(d => {
-            const act = d.data().action;
-            if(d.data().type === 'tag') counts[act] = (counts[act] || 0) + 1;
-            if(act.includes('工作') || act.includes('產出')) w++; else if(act.includes('休息') || act.includes('生活')) l++; else m++;
-        });
-        const total = (w + l + m) || 1;
-        document.getElementById('workBar').style.width = (w/total*100) + '%';
-        document.getElementById('lifeBar').style.width = (l/total*100) + '%';
-        document.getElementById('moodBar').style.width = (m/total*100) + '%';
-        const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]); const s2 = document.getElementById('stage2'); s2.innerHTML = '';
-        const coords = [{x:0, y:0}, {x:0.1, y:-1.2}, {x:1, y:-0.5}, {x:1.1, y:0.5}, {x:0.3, y:1.2}, {x:-0.95, y:0.7}, {x:-1.1, y:-0.4}];
-        sorted.forEach(([name, count], i) => { if (i >= 7) return; const coord = coords[i]; const ratio = (sorted[0] && sorted[0][1]) ? count / sorted[0][1] : 0.5; const size = 52 + (ratio * 102); const b = document.createElement('div'); b.className = 'sphere'; b.style.cssText = `width:${size}px; height:${size}px; left:calc(50% + ${coord.x * 138}px - ${size/2}px); top:calc(50% + ${coord.y * 138}px - ${size/2}px); background:rgb(${[0, 80, 130, 180, 210, 230, 245][i]},${[0, 80, 130, 180, 210, 230, 245][i]},${[0, 80, 130, 180, 210, 230, 245][i]}); color:${i<3?'#fff':'#000'}; font-weight:600; font-size:${11+(ratio*5)}px; z-index:${100-i}; --b-dur:${(3.5+Math.random()*3)+'s'}; --b-delay:${(Math.random()*-5)+'s'}; --b-x:${(Math.random()*14-7)+'px'}; --b-y:${(Math.random()*14-7)+'px'};`; b.innerHTML = `<span>${name}</span>`; s2.appendChild(b); });
-    };
-
-    window.renderCalendar = () => {
-        const grid = document.getElementById('calGrid'); if(!grid) return; grid.innerHTML = '';
-        const year = viewDate.getFullYear(), month = viewDate.getMonth();
-        document.getElementById('calTitle').innerText = `${year}年 ${month+1}月`;
-        const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month+1, 0).getDate();
-        for(let i=0; i<firstDay; i++) grid.innerHTML += '<div></div>';
-        for(let d=1; d<=daysInMonth; d++) {
-            const dayLogs = logsCache.filter(l => { const ld = l.timestamp?.toDate() || new Date(); return ld.getMonth() === month && ld.getDate() === d; });
-            const dayEl = document.createElement('div'); dayEl.className = 'cal-day'; dayEl.innerHTML = `${d}<div style="display:block">${dayLogs.slice(0,3).map(()=>'<div class="heat-dot"></div>').join('')}</div>`;
-            dayEl.onclick = (e) => { e.stopPropagation(); window.jumpTo(`${month+1}月${d}日`); }; grid.appendChild(dayEl);
-        }
-    };
-
-    window.jumpTo = (id) => { const el = document.getElementById('date-'+id); if(el) { document.getElementById('memoryArea').scrollTop = el.offsetTop - 20; window.tm(); } };
-    window.updW = async (id, w, isCust) => { if(!w) return; await updateDoc(doc(db, "daily_logs", id), { weather: w, isCustom: isCust }); window.loadMemories(); showToast(isCust?'已珍藏':'已紀錄'); };
-    window.tm = () => { const t = document.getElementById('timeMachine'); t.style.display = t.style.display==='block'?'none':'block'; };
-
-    window.renderAll = () => {
-        const s0 = document.getElementById('stage0'), s1 = document.getElementById('stage1'); s0.innerHTML = ''; s1.innerHTML = '';
-        tags.forEach((t, i) => {
-            if(t.selected) { 
-                const b = document.createElement('button'); b.className = 'pill-tag'; b.innerText = t.name; 
-                b.onclick = (e) => { e.stopPropagation(); window.handleTagClick(t.name); }; 
-                s0.appendChild(b); 
-            }
-            const b2 = document.createElement('button'); b2.className = t.selected ? 'square-tag selected' : 'square-tag';
-            b2.innerHTML = `<span>${t.name}</span><br><span style="font-size:10px;opacity:0.5">${t.count||0}</span>`;
-            let timer; b2.onmousedown = () => timer = setTimeout(() => { if(confirm('刪除標籤？')){ tags.splice(i,1); renderAll(); localStorage.setItem('myPills', JSON.stringify(tags)); } }, 1000); b2.onmouseup = () => clearTimeout(timer); b2.ontouchstart = b2.onmousedown; b2.ontouchend = b2.onmouseup;
-            b2.onclick = (e) => { e.stopPropagation(); t.selected = !t.selected; renderAll(); localStorage.setItem('myPills', JSON.stringify(tags)); }; s1.appendChild(b2);
-        });
-    };
-
-    window.onload = () => {
-        document.getElementById('sendBtn').onclick = (e) => { e.stopImmediatePropagation(); window.saveAction('input'); };
-        document.getElementById('addTagBtn').onclick = (e) => { e.stopImmediatePropagation(); const v = document.getElementById('newTagInput').value; if(v){ tags.unshift({name:v, selected:true, count:0}); renderAll(); document.getElementById('newTagInput').value=''; showToast('已紀錄'); } };
-        document.getElementById('tmBtn').onclick = (e) => { e.stopPropagation(); window.tm(); };
-        document.getElementById('prevM').onclick = (e) => { e.stopPropagation(); window.changeMonth(-1); };
-        document.getElementById('nextM').onclick = (e) => { e.stopPropagation(); window.changeMonth(1); };
-        const ed = document.getElementById('quoteEditor'); ed.innerHTML = '';
-        quotes.forEach((q, i) => { ed.innerHTML += `<div style="padding:15px; border-bottom:0.5px solid #eee; display:flex; align-items:center;"><input id="q-${i}" style="flex:1; border:none; font-size:16px;" value="${q}"><button class="q-save" data-i="${i}" style="background:#1c1c1e;color:#fff;border-radius:10px;padding:8px 14px;font-size:13px;">確定</button></div>`; });
-        document.querySelectorAll('.q-save').forEach(b => b.onclick = () => { quotes[b.dataset.i] = document.getElementById('q-'+b.dataset.i).value; localStorage.setItem('myQuotes', JSON.stringify(quotes)); showToast('已鎖定'); });
-        renderAll(); triggerSplash(0);
-    };
-
-    window.addEventListener('touchstart', e => { window.startY = e.touches[0].clientY; window.tmActive = (document.getElementById('timeMachine').style.display === 'block'); }, {passive: true});
-    window.addEventListener('touchend', e => {
-        if (window.tmActive) return;
-        const dY = window.startY - e.changedTouches[0].clientY;
-        const zone = e.target.closest('.memory-area') || e.target.closest('#quoteEditor');
-        if (zone) { if ((dY < -130 && zone.scrollTop <= 0) || (dY > 130 && (zone.scrollTop + zone.offsetHeight >= zone.scrollHeight))) { cur = dY > 0 ? Math.min(cur + 1, 4) : Math.max(cur - 1, 0); triggerSplash(cur); } }
-        else if (Math.abs(dY) > 80) { cur = dY > 0 ? Math.min(cur + 1, 4) : Math.max(cur - 1, 0); triggerSplash(cur); }
-    }, {passive: true});
-</script>
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<HairSalonApp />);
+    </script>
 </body>
 </html>
