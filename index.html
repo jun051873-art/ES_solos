@@ -2,8 +2,8 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>專屬空間沙龍 - 黑金1號 (人員管理測試版)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Salon POS - 黑金1號</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,23 +15,33 @@
 
     <style>
         :root { --primary: #1C1C1E; --accent: #D4AF37; --bg-ios: #F2F2F7; }
-        body { font-family: -apple-system, 'Noto Sans TC', sans-serif; background: var(--bg-ios); margin: 0; overflow: hidden; }
+        
+        body { 
+            font-family: -apple-system, 'Noto Sans TC', sans-serif; 
+            background: var(--bg-ios); 
+            margin: 0; 
+            overflow: hidden; 
+            /* 隱藏原生瀏覽器選取與右鍵選單感 */
+            -webkit-user-select: none;
+            user-select: none;
+        }
 
-        /* 核心：iOS 原生感液態玻璃指示器 */
+        /* 隱藏捲軸：讓介面更像 App */
+        *::-webkit-scrollbar { display: none !important; }
+        * { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+
+        /* 核心：iOS 液態玻璃物理效果 */
         .glass-indicator {
             position: absolute;
-            background: rgba(255, 255, 255, 0.45); 
+            background: rgba(255, 255, 255, 0.5); 
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 0.5px solid rgba(255, 255, 255, 0.7);
+            border: 0.5px solid rgba(255, 255, 255, 0.8);
             border-radius: 1.25rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03), 0 8px 30px rgba(0,0,0,0.05);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.05);
             transition: all 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.2);
             z-index: 0; pointer-events: none;
         }
-
-        .menu-btn { position: relative; z-index: 1; background: transparent; color: #8E8E93; transition: all 0.3s ease; }
-        .active-text { color: #000 !important; font-weight: 700; }
 
         .staff-card {
             background: rgba(255, 255, 255, 0.7);
@@ -40,19 +50,20 @@
             border-radius: 2rem;
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .staff-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.05); }
 
         .input-ios {
             width: 100%; background: rgba(255,255,255,0.8); border: 1px solid #E5E5EA;
-            border-radius: 1rem; padding: 0.75rem 1rem; outline: none; transition: all 0.2s;
+            border-radius: 1rem; padding: 0.85rem 1rem; outline: none; transition: all 0.2s;
+            -webkit-appearance: none;
         }
         .input-ios:focus { border-color: var(--accent); background: white; }
 
+        .active-text { color: #000 !important; font-weight: 700; }
         .text-gold-gradient {
             background: linear-gradient(135deg, #b8860b, #D4AF37, #fdf5e6, #D4AF37);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
-        .animate-fade-in { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-fade-in { animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
@@ -67,35 +78,22 @@
             const [indicatorStyle, setIndicatorStyle] = useState({ top: 0, height: 0, width: 0, left: 0 });
             const btnRefs = useRef({});
 
-            // --- 預設範例人員 (小刀設計師) ---
+            // --- 人員數據 (預設範例) ---
             const [staffList, setStaffList] = useState([
-                { 
-                    id: 'example-1', 
-                    name: '小刀', 
-                    role: '設計師', 
-                    baseSalary: 30000, 
-                    bonus: 5000, 
-                    fullAttendance: 2000, 
-                    commissionType: '個別設定', 
-                    commissionValue: 35, 
-                    color: '#D4AF37', 
-                    note: '主攻美式漸層與液態造型' 
-                }
+                { id: '1', name: '小刀', role: '設計師', baseSalary: 30000, bonus: 5000, fullAttendance: 2000, commissionType: '個別設定', commissionValue: 35, color: '#D4AF37', note: '主攻液態造型' }
             ]);
 
             const [showAddModal, setShowAddModal] = useState(false);
             const [editingStaff, setEditingStaff] = useState(null);
 
             const initialForm = { 
-                name: '', role: '設計師', customRole: '', 
-                baseSalary: '', bonus: '', fullAttendance: '', 
-                commissionType: '全店統一', commissionValue: '', 
+                name: '', role: '設計師', customRole: '', baseSalary: '', bonus: '', 
+                fullAttendance: '', commissionType: '全店統一', commissionValue: '', 
                 color: '#D4AF37', note: '' 
             };
             const [form, setForm] = useState(initialForm);
 
-            const menuItems = ['開單', '查單', '報表', '顧客', '庫存', '人員', '系統'];
-
+            // 物理吸附邏輯
             useEffect(() => {
                 const activeBtn = btnRefs.current[activeTab];
                 if (activeBtn) {
@@ -103,15 +101,15 @@
                 }
             }, [activeTab]);
 
-            // --- 修正後的儲存邏輯 ---
+            // --- 核心修復：新增與修改邏輯 ---
             const handleSaveStaff = () => {
-                if (!form.name) return alert("請輸入人員姓名");
+                if (!form.name.trim()) return alert("請輸入人員姓名");
                 
                 const finalRole = form.role === '其他' ? form.customRole : form.role;
                 const newStaffData = { 
                     ...form, 
                     role: finalRole, 
-                    id: editingStaff ? editingStaff.id : Date.now(),
+                    id: editingStaff ? editingStaff.id : Date.now().toString(),
                     baseSalary: Number(form.baseSalary) || 0,
                     bonus: Number(form.bonus) || 0,
                     fullAttendance: Number(form.fullAttendance) || 0,
@@ -129,9 +127,19 @@
                 setForm(initialForm);
             };
 
+            // --- 核心優化：刪除二次確認 ---
+            const handleDelete = (id, name) => {
+                if (window.confirm(`確定要刪除人員「${name}」嗎？這項動作無法還原。`)) {
+                    setStaffList(staffList.filter(s => s.id !== id));
+                }
+            };
+
+            const menuItems = ['開單', '查單', '報表', '顧客', '庫存', '人員', '系統'];
+
             return (
                 <div className="flex h-screen w-screen overflow-hidden bg-[#F2F2F7]">
-                    <aside style={{ minWidth: '120px' }} className="flex flex-col w-24 hover:w-64 bg-white/20 border-r border-gray-200/50 backdrop-blur-md transition-all duration-300 group overflow-hidden flex-shrink-0 relative">
+                    {/* 側邊導覽 (App 風格) */}
+                    <aside style={{ minWidth: '120px' }} className="flex flex-col w-24 hover:w-64 bg-white/30 border-r border-gray-200/50 backdrop-blur-md transition-all duration-300 group overflow-hidden flex-shrink-0 relative">
                         <div className="p-6 h-20 border-b border-gray-200/30 flex items-center gap-4 relative z-10">
                             <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-[#D4AF37] font-black text-xl shadow-lg">S</div>
                             <span className="font-bold text-[#1C1C1E] opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Salon POS</span>
@@ -139,7 +147,7 @@
                         <nav className="flex-1 p-4 space-y-2 relative">
                             <div className="glass-indicator" style={{ top: `${indicatorStyle.top}px`, left: `${indicatorStyle.left}px`, width: `${indicatorStyle.width}px`, height: `${indicatorStyle.height}px` }}></div>
                             {menuItems.map(item => (
-                                <button key={item} ref={el => btnRefs.current[item] = el} onClick={() => setActiveTab(item)} className={`w-full py-4 px-4 rounded-2xl flex items-center gap-4 menu-btn ${activeTab === item ? 'active-text' : ''}`}>
+                                <button key={item} ref={el => btnRefs.current[item] = el} onClick={() => setActiveTab(item)} className={`w-full py-4 px-4 rounded-2xl flex items-center gap-4 transition-all relative z-10 ${activeTab === item ? 'active-text' : 'text-gray-400'}`}>
                                     <div className={`w-6 h-6 rounded-md ${activeTab === item ? 'bg-[#D4AF37]/20' : 'bg-gray-300/30'}`}></div>
                                     <span className="opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap font-medium">{item}</span>
                                 </button>
@@ -147,18 +155,19 @@
                         </nav>
                     </aside>
 
+                    {/* 主區域 */}
                     <main className="flex-1 p-6 flex flex-col gap-6 overflow-hidden animate-fade-in">
-                        <div className="flex-1 bg-white/50 backdrop-blur-2xl border border-white/80 rounded-[2.5rem] p-10 shadow-sm relative overflow-hidden">
+                        <div className="flex-1 bg-white/50 backdrop-blur-2xl border border-white/80 rounded-[2.5rem] p-10 shadow-sm relative overflow-hidden flex flex-col">
                              <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#D4AF37]/10 blur-[80px] rounded-full"></div>
                              
-                             {activeTab === '人員' && (
+                             {activeTab === '人員' ? (
                                 <div className="h-full flex flex-col">
                                     <div className="flex justify-between items-center mb-8">
                                         <h2 className="text-4xl font-black text-gold-gradient tracking-tight">人員管理</h2>
                                         <button onClick={() => { setForm(initialForm); setShowAddModal(true); }} className="bg-[#1C1C1E] text-[#D4AF37] px-8 py-3 rounded-2xl font-black shadow-lg hover:scale-105 transition-all">+ 新增人員</button>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto pb-10">
                                         {staffList.map(staff => (
                                             <div key={staff.id} className="staff-card p-6 relative overflow-hidden animate-fade-in">
                                                 <div className="absolute top-0 right-0 w-20 h-20 bg-opacity-10 rounded-bl-full" style={{ backgroundColor: staff.color }}></div>
@@ -169,27 +178,33 @@
                                                     </div>
                                                     <div className="flex space-x-1 relative z-10">
                                                         <button onClick={() => { setEditingStaff(staff); setForm(staff); setShowAddModal(true); }} className="w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center hover:text-[#D4AF37]">✎</button>
-                                                        <button onClick={() => setStaffList(staffList.filter(s => s.id !== staff.id))} className="w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center hover:text-red-500">✕</button>
+                                                        <button onClick={() => handleDelete(staff.id, staff.name)} className="w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center hover:text-red-500 text-xs">✕</button>
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-y-2 text-xs font-bold text-gray-500">
                                                     <span>底薪: <b className="text-gray-800">${staff.baseSalary}</b></span>
                                                     <span>加給: <b className="text-gray-800">${staff.bonus}</b></span>
-                                                    <span className="col-span-2 py-1 border-t border-gray-100 mt-1">抽成: <b className="text-[#D4AF37]">{staff.commissionType === '個別設定' ? `${staff.commissionValue}% (優先)` : '依照全店設定'}</b></span>
+                                                    <span className="col-span-2 py-1 border-t border-gray-100 mt-1">抽成: <b className="text-[#D4AF37]">{staff.commissionType === '個別設定' ? `${staff.commissionValue}% (優先)` : '依全店設定'}</b></span>
                                                 </div>
                                                 <div className="mt-4 p-3 bg-white/40 rounded-xl border border-white border-dashed text-[11px] text-gray-400 italic">備註: {staff.note || '無'}</div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
+                             ) : (
+                                <div className="flex-1 flex flex-col">
+                                    <h2 className="text-4xl font-black text-gold-gradient mb-8 tracking-tight">{activeTab}管理</h2>
+                                    <div className="flex-1 border-2 border-dashed border-gray-200/50 rounded-[2.5rem] flex items-center justify-center text-gray-400 font-bold text-xl">模組打磨中...</div>
+                                </div>
                              )}
                         </div>
                     </main>
 
+                    {/* 新增/修改人員 Modal */}
                     {showAddModal && (
                         <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[100] flex items-center justify-center p-4">
                             <div className="bg-[#F2F2F7] w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl animate-fade-in">
-                                <h3 className="text-2xl font-black mb-6 text-gold-gradient">{editingStaff ? '修改人員' : '建立新成員'}</h3>
+                                <h3 className="text-2xl font-black mb-6 text-gold-gradient">{editingStaff ? '修改人員資料' : '建立新成員'}</h3>
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div><label className="text-[10px] font-black text-gray-400 ml-2">姓名</label><input className="input-ios" value={form.name} onChange={e=>setForm({...form, name: e.target.value})}/></div>
@@ -201,29 +216,25 @@
                                         </div>
                                     </div>
                                     {form.role === '其他' && <input className="input-ios" placeholder="輸入自定義職位" value={form.customRole} onChange={e=>setForm({...form, customRole: e.target.value})}/>}
-                                    
                                     <div className="grid grid-cols-3 gap-3">
                                         <input type="number" placeholder="底薪" className="input-ios" value={form.baseSalary} onChange={e=>setForm({...form, baseSalary: e.target.value})}/>
                                         <input type="number" placeholder="加給" className="input-ios" value={form.bonus} onChange={e=>setForm({...form, bonus: e.target.value})}/>
                                         <input type="number" placeholder="全勤" className="input-ios" value={form.fullAttendance} onChange={e=>setForm({...form, fullAttendance: e.target.value})}/>
                                     </div>
-
                                     <div className="p-4 bg-white/50 rounded-2xl border border-white">
                                         <div className="flex gap-6 mb-3">
-                                            <label className="flex items-center space-x-2 text-sm font-bold"><input type="radio" checked={form.commissionType === '全店統一'} onChange={()=>setForm({...form, commissionType:'全店統一'})}/> <span>全店統一</span></label>
-                                            <label className="flex items-center space-x-2 text-sm font-bold"><input type="radio" checked={form.commissionType === '個別設定'} onChange={()=>setForm({...form, commissionType:'個別設定'})}/> <span>個別設定</span></label>
+                                            <label className="flex items-center space-x-2 text-sm font-bold cursor-pointer"><input type="radio" checked={form.commissionType === '全店統一'} onChange={()=>setForm({...form, commissionType:'全店統一'})}/> <span>全店統一</span></label>
+                                            <label className="flex items-center space-x-2 text-sm font-bold cursor-pointer"><input type="radio" checked={form.commissionType === '個別設定'} onChange={()=>setForm({...form, commissionType:'個別設定'})}/> <span>個別設定</span></label>
                                         </div>
                                         {form.commissionType === '個別設定' && <input type="number" placeholder="輸入抽成 %" className="input-ios" value={form.commissionValue} onChange={e=>setForm({...form, commissionValue: e.target.value})}/>}
                                     </div>
-
                                     <div className="flex items-center gap-4">
-                                        <input type="color" className="w-10 h-8 bg-transparent" value={form.color} onChange={e=>setForm({...form, color: e.target.value})}/>
-                                        <input className="input-ios" placeholder="備註" value={form.note} onChange={e=>setForm({...form, note: e.target.value})}/>
+                                        <input type="color" className="w-10 h-8 bg-transparent cursor-pointer" value={form.color} onChange={e=>setForm({...form, color: e.target.value})}/>
+                                        <input className="input-ios" placeholder="備註內容" value={form.note} onChange={e=>setForm({...form, note: e.target.value})}/>
                                     </div>
-
-                                    <div className="flex gap-4 pt-4">
-                                        <button onClick={() => setShowAddModal(false)} className="flex-1 py-4 font-bold text-gray-400">取消</button>
-                                        <button onClick={handleSaveStaff} className="flex-1 py-4 bg-[#1C1C1E] text-[#D4AF37] rounded-2xl font-black shadow-lg">確認存檔</button>
+                                    <div className="flex gap-4 pt-4 border-t border-gray-200">
+                                        <button onClick={() => {setShowAddModal(false); setEditingStaff(null);}} className="flex-1 py-4 font-bold text-gray-400 hover:text-gray-600">取消</button>
+                                        <button onClick={handleSaveStaff} className="flex-1 py-4 bg-[#1C1C1E] text-[#D4AF37] rounded-[1.5rem] font-black shadow-xl active:scale-95 transition-all">確認存檔</button>
                                     </div>
                                 </div>
                             </div>
