@@ -1425,20 +1425,18 @@ const S7_ExpenseModule = () => {
     );
 };
 
-     // ==========================================
-// --- S8 系統設定 (100% 原始美術 + 接口通電) ---
+    // ==========================================
+// --- S8 系統設定 (全功能補回 + 原子級還原) ---
 // ==========================================
 const S8_SystemModule = ({ services, setServices }) => {
     const [activeMenu, setActiveMenu] = useState('標籤');
     const [itemTab, setItemTab] = useState('服務');
-    
-    // 初始化雲端網址
     const [cloudUrl, setCloudUrl] = useState(localStorage.getItem('salon_cloud_url') || '');
     
-    // 原始標籤數據
+    // 原始標籤狀態
     const [genders, setGenders] = useState(['男', '女', '老', '長輩']);
     const [classes, setClasses] = useState(['洗髮', '剪髮', '燙髮', '染髮', '護理']);
-    const [payments, setPayments] = useState(['現金', 'Line Pay', '街口']);
+    const [payments, setPayments] = useState(['現金', 'Line Pay', '街口', '信用卡']);
     const [products, setProducts] = useState([
         { id: 1, name: '髮質護理組', price: 1500, cost: 850, comm: 10 }
     ]);
@@ -1449,7 +1447,7 @@ const S8_SystemModule = ({ services, setServices }) => {
     const [tagInput, setTagInput] = useState('');
     const [openDropdown, setOpenDropdown] = useState(false);
 
-    // 儲存網址到神經中樞
+    // ⚡️ 功能補回：雲端網址即時保存
     const handleCloudUrlChange = (val) => {
         setCloudUrl(val);
         localStorage.setItem('salon_cloud_url', val);
@@ -1462,7 +1460,7 @@ const S8_SystemModule = ({ services, setServices }) => {
         setItemModal({ show: true, data });
     };
 
-    // ⚡️ 通電：刪除功能連動主系統
+    // ⚡️ 功能補回：服務與商品的增刪邏輯
     const handleDeleteItem = (id, name) => {
         if (window.confirm(`【確認刪除】確定要移除「${name}」項目嗎？`)) {
             if (itemTab === '服務') setServices(services.filter(i => i.id !== id));
@@ -1470,7 +1468,6 @@ const S8_SystemModule = ({ services, setServices }) => {
         }
     };
 
-    // ⚡️ 通電：存檔功能連動主系統
     const handleSaveItem = () => {
         if (itemTab === '服務') {
             if (itemModal.data) setServices(services.map(i => i.id === itemModal.data.id ? {...itemForm} : i));
@@ -1482,26 +1479,25 @@ const S8_SystemModule = ({ services, setServices }) => {
         setItemModal({ show: false });
     };
 
-    useEffect(() => { if (window.lucide) lucide.createIcons(); }, [activeMenu, itemTab, services, products, itemModal, tagModal, openDropdown]);
+    useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [activeMenu, itemTab, services, products, itemModal, tagModal, openDropdown]);
 
     return (
         <div className="flex h-full w-full gap-10 bg-transparent overflow-hidden">
-            {/* 左側：側欄 100% 複製原始樣式 */}
-            <div className="w-80 liquid-glass p-8 flex flex-col gap-4 bg-white/45">
+            {/* 左側：側欄功能導航 */}
+            <div className="w-80 liquid-glass p-8 flex flex-col gap-4 bg-white/45 border-white shadow-xl">
                 <div className="px-4 mb-10"><h1 className="text-5xl font-black text-[#D4AF37] tracking-tighter italic">系統</h1></div>
-                <div onClick={()=>setActiveMenu('標籤')} className={`sidebar-item ${activeMenu==='標籤'?'active':''}`}><Icon name="tag"/> 標籤</div>
-                <div onClick={()=>setActiveMenu('項目')} className={`sidebar-item ${activeMenu==='項目'?'active':''}`}><Icon name="layers"/> 項目</div>
-                <div className="mt-auto border-t border-white/40 pt-6">
-                    <div onClick={()=>setActiveMenu('備份導入')} className={`sidebar-item ${activeMenu==='備份導入'?'active':''}`}><Icon name="cloud"/> 備份導入</div>
-                </div>
+                <div onClick={()=>setActiveMenu('標籤')} className={`sidebar-item ${activeMenu==='標籤'?'active':''}`}><Icon name="tag"/> 標籤管理</div>
+                <div onClick={()=>setActiveMenu('項目')} className={`sidebar-item ${activeMenu==='項目'?'active':''}`}><Icon name="layers"/> 項目清單</div>
+                <div onClick={()=>setActiveMenu('備份導入')} className={`sidebar-item ${activeMenu==='備份導入'?'active':''}`}><Icon name="cloud"/> 備份同步</div>
+                <div className="mt-auto pt-6 border-t border-white/40 text-[10px] font-black text-gray-300 text-center uppercase italic">Salon Pro Config</div>
             </div>
 
-            {/* 右側：主內容區 100% 複製原始樣式 */}
-            <div className="flex-1 liquid-glass p-16 overflow-y-auto bg-white/45">
+            {/* 右側：主內容區 */}
+            <div className="flex-1 liquid-glass p-16 overflow-y-auto bg-white/45 border-white shadow-2xl">
                 {activeMenu === '標籤' && (
                     <div className="space-y-12 animate-pop">
-                        <h2 className="text-4xl font-black text-gray-800 border-b border-white pb-8 tracking-tighter">標籤制定</h2>
-                        {[['性別', genders, setGenders], ['類別', classes, setClasses], ['結帳', payments, setPayments]].map(([title, list, setList]) => (
+                        <h2 className="text-4xl font-black text-gray-800 border-b border-white pb-8 tracking-tighter italic">系統標籤制定</h2>
+                        {[['性別', genders, setGenders], ['類別歸屬', classes, setClasses], ['結帳方式', payments, setPayments]].map(([title, list, setList]) => (
                             <div key={title} className="tag-card space-y-8">
                                 <div className="flex justify-between items-center px-2">
                                     <h3 className="text-3xl font-black text-gray-700 italic">{title}</h3>
@@ -1509,9 +1505,9 @@ const S8_SystemModule = ({ services, setServices }) => {
                                 </div>
                                 <div className="flex flex-wrap gap-5 px-2">
                                     {list.map(t => (
-                                        <div key={t} className="pill-item group shadow-sm">
-                                            <span>{t}</span>
-                                            <div className="flex gap-4 ml-6 opacity-0 group-hover:opacity-100 transition-all">
+                                        <div key={t} className="pill-item group shadow-sm bg-white/60 p-4 rounded-2xl flex items-center gap-6 border border-white">
+                                            <span className="font-black">{t}</span>
+                                            <div className="flex gap-4 opacity-0 group-hover:opacity-100 transition-all">
                                                 <button onClick={()=>openTag(`修改${title}`, t, (v)=>setList(list.map(i=>i===t?v:i)))} className="text-blue-400 hover:scale-125"><Icon name="edit-3" size={16}/></button>
                                                 <button onClick={()=>{if(window.confirm('確定刪除？')) setList(list.filter(i=>i!==t))}} className="text-red-300 hover:scale-125"><Icon name="trash-2" size={16}/></button>
                                             </div>
@@ -1527,21 +1523,25 @@ const S8_SystemModule = ({ services, setServices }) => {
                     <div className="space-y-10 animate-pop">
                         <div className="flex justify-between items-center border-b border-white pb-10">
                             <div className="flex bg-white/50 p-2 rounded-2xl border border-white shadow-inner">
-                                <button onClick={()=>setItemTab('服務')} className={`px-10 py-3 rounded-[1.2rem] font-black transition-all ${itemTab==='服務'?'bg-black text-[#D4AF37] shadow-xl':'text-gray-400'}`}>服務</button>
-                                <button onClick={()=>setItemTab('商品')} className={`px-10 py-3 rounded-[1.2rem] font-black transition-all ${itemTab==='商品'?'bg-black text-[#D4AF37] shadow-xl':'text-gray-400'}`}>商品</button>
+                                <button onClick={()=>setItemTab('服務')} className={`px-12 py-3 rounded-[1.2rem] font-black transition-all ${itemTab==='服務'?'bg-black text-[#D4AF37] shadow-xl':'text-gray-400'}`}>服務項目</button>
+                                <button onClick={()=>setItemTab('商品')} className={`px-12 py-3 rounded-[1.2rem] font-black transition-all ${itemTab==='商品'?'bg-black text-[#D4AF37] shadow-xl':'text-gray-400'}`}>產品販賣</button>
                             </div>
-                            <button onClick={()=>openItem()} className="btn-plus shadow-xl"><Icon name="plus" size={24}/></button>
+                            <button onClick={()=>openItem()} className="btn-plus shadow-xl scale-125"><Icon name="plus" size={24}/></button>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-12">
                             {(itemTab === '服務' ? services : products).map(item => (
-                                <div key={item.id} className="tag-card group relative hover:bg-white transition-all border border-white p-10 rounded-[3rem] bg-white/50">
+                                <div key={item.id} className="tag-card group relative hover:bg-white transition-all border border-white p-10 rounded-[3rem] bg-white/50 shadow-sm">
                                     <div className="flex justify-between items-start mb-6 px-2">
-                                        <div><span className="text-[10px] font-black bg-[#D4AF37] text-white px-3 py-1 rounded-full uppercase mb-2 inline-block tracking-widest">{item.cat || '商品'}</span><h4 className="text-3xl font-black text-gray-800 italic">{item.name}</h4></div>
-                                        <b className="text-4xl font-black text-gray-900 tracking-tighter">${item.price}</b>
+                                        <div><span className="text-[10px] font-black bg-[#D4AF37] text-white px-3 py-1 rounded-full uppercase mb-2 inline-block tracking-widest italic">{itemTab}</span><h4 className="text-3xl font-black text-gray-800 italic">{item.name}</h4></div>
+                                        <b className="text-5xl font-black text-gray-900 tracking-tighter italic">${item.price}</b>
                                     </div>
-                                    <div className="flex gap-10 pt-6 border-t border-white text-[11px] font-black text-gray-400 italic px-2">
+                                    <div className="flex gap-10 pt-6 border-t border-white text-xs font-black text-gray-400 italic px-2">
                                         <div>成本: ${item.cost}</div>
-                                        {itemTab === '服務' ? (<><div>A抽: {item.mode==='percent'?`${item.commA}%`:`$${item.commA}`}</div><div>B抽: {item.mode==='percent'?`${item.commB}%`:`$${item.commB}`}</div></>) : (<div>抽成: {item.comm}%</div>)}
+                                        {itemTab === '服務' ? (
+                                            <><div className="text-blue-500">師抽(A): {item.commA}{item.mode==='percent'?'%':'$'}</div><div className="text-green-500">助抽(B): {item.commB}{item.mode==='percent'?'%':'$'}</div></>
+                                        ) : (
+                                            <div className="text-orange-500">抽成比例: {item.comm}%</div>
+                                        )}
                                     </div>
                                     <div className="absolute top-8 right-8 flex gap-4 opacity-0 group-hover:opacity-100 transition-all">
                                         <button onClick={()=>openItem(item)} className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg text-blue-500 hover:scale-110 transition-all"><Icon name="edit-3" size={20}/></button>
@@ -1552,34 +1552,70 @@ const S8_SystemModule = ({ services, setServices }) => {
                         </div>
                     </div>
                 )}
+
+                {activeMenu === '備份導入' && (
+                    <div className="space-y-12 animate-pop">
+                        <h2 className="text-4xl font-black text-gray-800 border-b border-white pb-8 tracking-tighter italic">雲端神經中樞連線</h2>
+                        <div className="card-pearl p-12 bg-white/40 space-y-10 shadow-inner rounded-[3rem]">
+                            <div className="space-y-4">
+                                <label className="text-[11px] font-black text-gray-400 ml-6 uppercase tracking-widest italic">Google Apps Script 網頁部署網址</label>
+                                <input className="input-pearl w-full text-blue-600 font-bold text-lg" value={cloudUrl} onChange={(e) => handleCloudUrlChange(e.target.value)} placeholder="https://script.google.com/..."/>
+                                <p className="text-[11px] text-blue-400 font-bold ml-6 italic">* 此網址為全系統通電關鍵，請確保已發佈為「任何人」均可存取。</p>
+                            </div>
+                            <div className="flex gap-6">
+                                <button className="flex-1 py-8 bg-[#1C1C1E] text-[#D4AF37] rounded-[2rem] font-black shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 text-xl italic"><Icon name="upload-cloud" size={28}/> 雲端同步備份</button>
+                                <button className="flex-1 py-8 bg-white border border-white rounded-[2rem] font-black text-gray-600 shadow-xl active:scale-95 transition-all flex items-center justify-center gap-4 text-xl italic"><Icon name="download-cloud" size={28}/> 抓取最新數據</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* 究極晶體彈窗 100% 還原 */}
+            {/* 究極晶體彈窗 (Modal) - 包含 A/B 抽成與商品切換 */}
             {(tagModal.show || itemModal.show) && (
                 <div className="fixed inset-0 bg-black/20 backdrop-blur-3xl z-[9000] flex items-center justify-center p-6 animate-fade-in">
                     <div className="crystal-modal w-full max-w-2xl p-16 animate-pop relative border-white">
-                        <h3 className="text-4xl font-black text-gray-900 mb-12 text-center tracking-tighter italic">{tagModal.show ? tagModal.title : `制定${itemTab}項目細節`}</h3>
+                        <h3 className="text-4xl font-black text-gray-900 mb-12 text-center tracking-tighter italic uppercase">{tagModal.show ? tagModal.title : `制定${itemTab}細節`}</h3>
                         {tagModal.show ? (
-                            <div className="space-y-12"><input autoFocus className="input-pearl w-full text-center text-3xl font-black italic bg-white/50" value={tagInput} onChange={e=>setTagInput(e.target.value)} />
-                                <div className="flex gap-6"><button onClick={()=>setTagModal({show:false})} className="flex-1 py-6 font-black text-gray-400 uppercase italic">Cancel</button>
-                                <button onClick={()=>{tagModal.callback(tagInput); setTagModal({show:false});}} className="flex-[2] py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-[2rem] text-2xl font-black shadow-2xl active:scale-95 transition-all">確認存檔</button></div></div>
+                            <div className="space-y-12">
+                                <input autoFocus className="input-pearl w-full text-center text-4xl font-black italic bg-white/50" value={tagInput} onChange={e=>setTagInput(e.target.value)} />
+                                <div className="flex gap-6">
+                                    <button onClick={()=>setTagModal({show:false})} className="flex-1 py-6 font-black text-gray-400 uppercase italic">Cancel</button>
+                                    <button onClick={()=>{tagModal.callback(tagInput); setTagModal({show:false});}} className="flex-[2] py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-[2rem] text-2xl font-black shadow-2xl active:scale-95 transition-all italic">確認存檔</button>
+                                </div>
+                            </div>
                         ) : (
                             <div className="space-y-8">
-                                <div className="grid grid-cols-2 gap-8"><div className="col-span-2 space-y-2"><label className="text-[11px] font-black text-gray-400 ml-6 uppercase italic">項目名稱</label><input className="input-pearl w-full font-black" value={itemForm.name} onChange={e=>setItemForm({...itemForm, name:e.target.value})}/></div>
-                                {itemTab==='服務' && (<div className="space-y-2 relative"><label className="text-[11px] font-black text-gray-400 ml-6 uppercase italic">類別歸屬</label>
-                                    <div onClick={()=>setOpenDropdown(!openDropdown)} className="input-pearl flex justify-between items-center cursor-pointer bg-white/90 font-black shadow-sm"><span>{itemForm.cat}</span><Icon name="chevron-down" color="#D4AF37" /></div>
-                                    {openDropdown && ( <div className="select-floating border-white shadow-2xl animate-pop">{classes.map(c => (<div key={c} onClick={()=>{setItemForm({...itemForm, cat:c}); setOpenDropdown(false);}} className={`select-item ${itemForm.cat===c?'active':''}`}>{c} {itemForm.cat===c && <Icon name="check" size={16} color="white"/>}</div>))}</div>)}</div>)}
-                                <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 ml-6 uppercase italic">售價 / 成本</label><div className="flex gap-4"><input className="input-pearl w-1/2 text-center" placeholder="售" value={itemForm.price} onChange={e=>setItemForm({...itemForm, price:e.target.value})}/><input className="input-pearl w-1/2 text-center" placeholder="成本" value={itemForm.cost} onChange={e=>setItemForm({...itemForm, cost:e.target.value})}/></div></div></div>
+                                <div className="grid grid-cols-2 gap-8">
+                                    <div className="col-span-2 space-y-2"><label className="text-[11px] font-black text-gray-400 ml-6 uppercase italic">項目名稱</label><input className="input-pearl w-full font-black text-2xl" value={itemForm.name} onChange={e=>setItemForm({...itemForm, name:e.target.value})}/></div>
+                                    <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 ml-6 uppercase italic">售價</label><input className="input-pearl w-full text-center text-[#D4AF37] text-4xl font-black italic" value={itemForm.price} onChange={e=>setItemForm({...itemForm, price:e.target.value})}/></div>
+                                    {itemTab==='服務' ? (
+                                        <div className="space-y-2 relative"><label className="text-[11px] font-black text-gray-400 ml-6 uppercase italic">分類</label>
+                                            <div onClick={()=>setOpenDropdown(!openDropdown)} className="input-pearl flex justify-between items-center cursor-pointer bg-white font-black"><span>{itemForm.cat}</span><Icon name="chevron-down" color="#D4AF37" /></div>
+                                            {openDropdown && <div className="crystal-menu shadow-2xl animate-pop"> {classes.map(c=><div key={c} onClick={()=>{setItemForm({...itemForm, cat:c}); setOpenDropdown(false);}} className="crystal-option">{c}</div>)}</div>}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2"><label className="text-[11px] font-black text-gray-400 ml-6 uppercase italic">成本</label><input className="input-pearl w-full text-center font-black" value={itemForm.cost} onChange={e=>setItemForm({...itemForm, cost:e.target.value})}/></div>
+                                    )}
+                                </div>
                                 {itemTab === '服務' ? (
-                                    <div className="p-10 bg-white/40 rounded-[2.5rem] border border-white space-y-8 shadow-inner"><div className="flex justify-between items-center px-2"><span className="text-sm font-black text-gray-700 italic uppercase">Commission Type</span><div className="flex bg-gray-200/50 p-1 rounded-xl border border-white shadow-sm">
-                                        <button onClick={()=>setItemForm({...itemForm, mode:'percent'})} className={`px-8 py-2 rounded-lg text-xs font-black transition-all ${itemForm.mode==='percent'?'bg-white shadow-md text-black':'text-gray-400'}`}>% 比例</button>
-                                        <button onClick={()=>setItemForm({...itemForm, mode:'amount'})} className={`px-8 py-2 rounded-lg text-xs font-black transition-all ${itemForm.mode==='amount'?'bg-white shadow-md text-black':'text-gray-400'}`}>$ 金額</button></div></div>
-                                        <div className="grid grid-cols-2 gap-8"><div><label className="text-[10px] font-black text-blue-500 ml-4 uppercase italic">A抽 (師)</label><input className="input-pearl w-full text-center text-2xl font-black text-blue-600" value={itemForm.commA} onChange={e=>setItemForm({...itemForm, commA:e.target.value})}/></div>
-                                        <div><label className="text-[10px] font-black text-green-500 ml-4 uppercase italic">B抽 (助)</label><input className="input-pearl w-full text-center text-2xl font-black text-green-600" value={itemForm.commB} onChange={e=>setItemForm({...itemForm, commB:e.target.value})}/></div></div></div>
+                                    <div className="p-10 bg-white/40 rounded-[3rem] border border-white space-y-8 shadow-inner">
+                                        <div className="flex justify-between items-center"><span className="text-xs font-black text-gray-400 uppercase tracking-widest italic">Commission Mode</span>
+                                        <div className="flex bg-gray-200/50 p-1 rounded-xl">
+                                            <button onClick={()=>setItemForm({...itemForm, mode:'percent'})} className={`px-8 py-2 rounded-lg text-xs font-black ${itemForm.mode==='percent'?'bg-white shadow-md text-black':'text-gray-400'}`}>% 比例</button>
+                                            <button onClick={()=>setItemForm({...itemForm, mode:'amount'})} className={`px-8 py-2 rounded-lg text-xs font-black ${itemForm.mode==='amount'?'bg-white shadow-md text-black':'text-gray-400'}`}>$ 金額</button></div></div>
+                                        <div className="grid grid-cols-2 gap-8">
+                                            <div><label className="text-[10px] font-black text-blue-500 uppercase italic block mb-3">師抽(A)</label><input className="input-pearl w-full text-center text-4xl font-black text-blue-600 bg-white/50" value={itemForm.commA} onChange={e=>setItemForm({...itemForm, commA:e.target.value})}/></div>
+                                            <div><label className="text-[10px] font-black text-green-500 uppercase italic block mb-3">助抽(B)</label><input className="input-pearl w-full text-center text-4xl font-black text-green-600 bg-white/50" value={itemForm.commB} onChange={e=>setItemForm({...itemForm, commB:e.target.value})}/></div>
+                                        </div>
+                                    </div>
                                 ) : (
-                                    <div className="p-10 bg-white/40 rounded-[2.5rem] border border-white shadow-inner flex flex-col items-center"><label className="text-[11px] font-black text-[#D4AF37] mb-4 uppercase tracking-widest italic">Profit Share (%)</label><input className="input-pearl w-48 text-center text-5xl font-black text-[#D4AF37] bg-transparent" value={itemForm.comm} onChange={e=>setItemForm({...itemForm, comm:e.target.value})}/></div>
+                                    <div className="p-10 bg-white/40 rounded-[2.5rem] border border-white shadow-inner flex flex-col items-center">
+                                        <label className="text-[11px] font-black text-[#D4AF37] mb-4 uppercase tracking-widest italic">Profit Share (%)</label>
+                                        <input className="input-pearl w-48 text-center text-6xl font-black text-[#D4AF37] bg-transparent" value={itemForm.comm} onChange={e=>setItemForm({...itemForm, comm:e.target.value})}/>
+                                    </div>
                                 )}
-                                <div className="flex gap-6 pt-6"><button onClick={()=>setItemModal({show:false})} className="flex-1 py-6 font-black text-gray-400 uppercase italic">Cancel</button><button onClick={handleSaveItem} className="flex-[2] py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-[2rem] text-2xl font-black shadow-2xl active:scale-95 transition-all italic">Save Settings</button></div>
+                                <div className="flex gap-6 pt-6"><button onClick={()=>setItemModal({show:false})} className="flex-1 py-6 font-black text-gray-400 uppercase italic">Cancel</button><button onClick={handleSaveItem} className="flex-[2] py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-[2rem] text-2xl font-black shadow-2xl active:scale-95 transition-all italic uppercase">Save Settings</button></div>
                             </div>
                         )}
                     </div>
