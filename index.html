@@ -62,211 +62,248 @@
             return <i data-lucide={name} className={className} style={{ width: size, height: size, stroke: color, strokeWidth: '2.5px' }}></i>;
         };
  // ======================================================
-// --- S1: 開單模組 (靈魂回歸：實收找零、搜尋修復、二次確認) ---
-// ======================================================
-const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCustomer, customers }) => {
+ // --- 第一部分：S1 開單模組 (增強版) ---
+ // ======================================================
+ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCustomer, customers }) => {
     const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
     const [gender, setGender] = useState('女生');
     const [category, setCategory] = useState('全部');
     const [orderItems, setOrderItems] = useState([]);
-    const [editingItem, setEditingItem] = useState(null);
+    const [editingItem, setEditingItem] = useState(null); 
     const [customerType, setCustomerType] = useState('散客');
     const [searchQuery, setSearchQuery] = useState('');
     const [payMethod, setPayMethod] = useState('現金');
-    const [cashIn, setCashIn] = useState(''); // 實收靈魂
+    const [cashIn, setCashIn] = useState('');
     const [selectedStaff, setSelectedStaff] = useState(staffList[0]);
     const [isStaffOpen, setIsStaffOpen] = useState(false);
     const [showReceipt, setShowReceipt] = useState(false);
-    
     const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [isProcessing, setIsProcessing] = useState(false);
 
-    // --- S1_OrderModule 內部的搜尋邏輯 ---
-    const suggestions = useMemo(() => {
-    // ⚡️ 增加保險絲：如果 customers 不存在或是空的，回傳空陣列，不報錯
-    if (customerType !== '會員' || !searchQuery.trim() || !customers) return [];
-    
-    return customers.filter(c => 
-        (c.name && c.name.includes(searchQuery)) || 
-        (c.phone && c.phone.includes(searchQuery))
-    );
-}, [searchQuery, customerType, customers]);
-    const addItem = (s) => setOrderItems(prev => [...prev, { ...s, orderId: Date.now(), finalPrice: s.price, assistant: '無' }]);
-    
-    // ⚡️ 補回：二次確認刪除
-    const removeItem = (id, name) => {
-        if (window.confirm(`【確認移除】確定要刪除「${name}」嗎？`)) {
-            setOrderItems(prev => prev.filter(i => i.orderId !== id));
-        }
+    // 項目操作
+    const addItem = (s) => setOrderItems(prev => [...prev, { 
+        ...s, 
+        orderId: Date.now(), 
+        finalPrice: s.price, 
+        originalPrice: s.price,
+        assistant: '無', 
+        discount: 0, 
+        discountRate: 100 
+    }]);
+
+    const updateItemDetail = (newDetail) => {
+        setOrderItems(prev => prev.map(i => i.orderId === newDetail.orderId ? newDetail : i));
+        setEditingItem(null);
     };
 
-    const totalAmount = orderItems.reduce((s, i) => s + i.finalPrice, 0);
+    const totalAmount = orderItems.reduce((sum, item) => sum + item.finalPrice, 0);
     const change = cashIn ? Math.max(0, parseInt(cashIn) - totalAmount) : 0;
 
-    const executeCheckout = async () => {
-        if (isProcessing) return;
-        setIsProcessing(true);
+    // 會員搜尋與「打勾」存檔邏輯
+    const suggestions = useMemo(() => {
+        if (customerType !== '會員' || !searchQuery.trim()) return [];
+        return customers.filter(c => c.name.includes(searchQuery) || c.phone.includes(searchQuery));
+    }, [searchQuery, customerType, customers]);
+
+    const handleQuickAddCustomer = () => {
+        if (!searchQuery.trim()) return;
+        // 觸發外部存檔函數
+        onAddCustomer({ name: searchQuery, staff: selectedStaff, tag: '新轉入' });
+        alert(`已將「${searchQuery}」存入顧客資料表`);
+    };
+
+    const handleFinalCheckout = () => {
         const record = {
             id: Date.now().toString(),
             date: orderDate,
-            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
             customer: searchQuery || "一般散客",
-            gender, staff: selectedStaff, total: totalAmount,
-            services: orderItems.map(i => i.name),
-            payment: payMethod
+            staff: selectedStaff,
+            total: totalAmount,
+            items: orderItems,
+            payment: payMethod,
+            cashIn: cashIn,
+            change: change
         };
-        await onCheckout(record);
-        setTimeout(() => {
-            setIsProcessing(false);
-            setShowConfirmModal(false);
-            setShowReceipt(true);
-            setOrderItems([]);
-            setCashIn('');
-            setSearchQuery('');
-        }, 500);
+        onCheckout(record);
+        setShowConfirmModal(false);
+        setShowReceipt(true);
+        setOrderItems([]);
+        setSearchQuery('');
+        setCashIn('');
     };
 
     return (
         <div className="h-full flex flex-col gap-6 animate-fade-in relative">
-            {/* Header */}
-            <div className="flex justify-between items-end mb-1">
+            {/* 標題與日期 */}
+            <div className="flex justify-between items-end">
                 <div>
-                    <h1 className="text-5xl font-black text-gold-gradient tracking-tighter italic">s1 開單結帳</h1>
-                    <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest ml-1">Precision System</p>
+                    <h1 className="text-5xl font-black text-gold-gradient italic tracking-tighter">S1 開單結帳</h1>
+                    <div className="flex gap-4 mt-2">
+                        {['女生', '男生'].map(g => (
+                            <button key={g} onClick={() => setGender(g)} className={`text-xs font-black px-3 py-1 rounded-full ${gender === g ? 'bg-black text-white' : 'bg-gray-200 text-gray-400'}`}>{g}</button>
+                        ))}
+                    </div>
                 </div>
-                <input type="date" className="input-ios w-40 text-xs font-black bg-white/60 border-white shadow-sm" value={orderDate} onChange={e => setOrderDate(e.target.value)} />
+                <input type="date" className="input-ios w-40 text-xs font-black" value={orderDate} onChange={e => setOrderDate(e.target.value)} />
             </div>
 
-            <div className="flex-1 flex flex-col md:flex-row gap-6 min-h-0">
-                {/* 左側項目選擇 */}
-                <div className="flex-[1.2] liquid-glass p-8 flex flex-col h-full overflow-hidden bg-white/20">
-                    <div className="flex gap-2 mb-6 border-b border-white/30 overflow-x-auto pb-2">
-                        {['全部', '洗髮', '剪髮', '燙髮', '染髮', '護理', '販賣'].map(c => (
+            <div className="flex-1 flex gap-6 min-h-0">
+                {/* 左側：服務菜單 */}
+                <div className="flex-[1.2] liquid-glass p-6 bg-white/20 flex flex-col">
+                    <div className="flex gap-2 mb-6 border-b border-white/30 pb-3 overflow-x-auto">
+                        {['全部', '洗髮', '剪髮', '燙髮', '染髮', '護理'].map(c => (
                             <button key={c} onClick={() => setCategory(c)} className={`pill-toggle whitespace-nowrap ${category === c ? 'active' : ''}`}>{c}</button>
                         ))}
                     </div>
-                    <div className="grid grid-cols-2 gap-4 overflow-y-auto pr-1">
+                    <div className="grid grid-cols-2 gap-4 overflow-y-auto pr-2">
                         {services.filter(s => category === '全部' || s.cat === category).map(s => (
-                            <button key={s.id} onClick={() => addItem(s)} className="service-card liquid-glass p-6 bg-white/40 hover:bg-white/80 text-left transition-all">
-                                <span className="text-[10px] font-black text-gray-400 uppercase italic opacity-60">{s.cat}</span>
-                                <h3 className="text-xl font-black text-[#1C1C1E]">{s.name}</h3>
-                                <b className="text-[#D4AF37] font-black">${s.price}</b>
+                            <button key={s.id} onClick={() => addItem(s)} className="service-card liquid-glass p-5 text-left hover:bg-white/80 transition-all">
+                                <span className="text-[9px] font-black text-gold-gradient uppercase">{s.cat}</span>
+                                <h3 className="text-lg font-black text-gray-800">{s.name}</h3>
+                                <b className="text-gray-500">${s.price}</b>
                             </button>
                         ))}
                     </div>
                 </div>
 
-                {/* 右側結帳清單 */}
-                <div className="flex-1 liquid-glass p-8 flex flex-col h-full bg-white/30 relative shadow-2xl">
-                    <div className="flex justify-between items-center mb-5">
-                        <h2 className="text-2xl font-black italic tracking-tighter">結帳明細</h2>
-                        <div className="flex bg-gray-200/40 p-1 rounded-xl shadow-inner">
+                {/* 右側：結帳清單 */}
+                <div className="flex-1 liquid-glass p-6 bg-white/30 flex flex-col shadow-2xl">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-black italic">結帳明細</h2>
+                        <div className="flex bg-gray-200/50 p-1 rounded-xl">
                             {['散客', '會員'].map(t => (
-                                <button key={t} onClick={() => { setCustomerType(t); setSearchQuery(''); }} className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${customerType === t ? 'bg-white shadow-sm text-black' : 'text-gray-400'}`}>{t}</button>
+                                <button key={t} onClick={() => {setCustomerType(t); setSearchQuery('');}} className={`px-4 py-1 text-[10px] font-black rounded-lg transition-all ${customerType === t ? 'bg-white shadow-sm' : 'text-gray-400'}`}>{t}</button>
                             ))}
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-5 items-end">
-                        <div className="space-y-1 relative">
-                            <label className="text-[9px] font-black text-gray-400 ml-4">設計師</label>
-                            <div onClick={() => setIsStaffOpen(!isStaffOpen)} className="input-ios cursor-pointer flex justify-between items-center bg-white shadow-sm border-white font-black">
-                                <span>{selectedStaff}</span><Icon name="chevron-down" size={16} color="#D4AF37" />
+                    {/* 設計師與會員搜尋 */}
+                    <div className="grid grid-cols-2 gap-3 mb-4 relative">
+                        <div className="relative">
+                            <label className="text-[9px] font-black text-gray-400 ml-2">主設計師</label>
+                            <div onClick={() => setIsStaffOpen(!isStaffOpen)} className="input-ios text-xs font-black cursor-pointer flex justify-between">
+                                {selectedStaff} <Icon name="chevron-down" size={14}/>
                             </div>
                             {isStaffOpen && (
-                                <div className="crystal-menu shadow-2xl border-white">
-                                    {staffList.map(s => (<div key={s} onClick={() => { setSelectedStaff(s); setIsStaffOpen(false); }} className="crystal-option">{s}</div>))}
+                                <div className="crystal-menu top-full w-full z-50">
+                                    {staffList.map(s => <div key={s} onClick={() => {setSelectedStaff(s); setIsStaffOpen(false);}} className="crystal-option text-xs">{s}</div>)}
                                 </div>
                             )}
                         </div>
-
-                        <div className="space-y-1 relative">
-                            <label className="text-[9px] font-black text-gray-400 ml-4">{customerType}搜尋</label>
-                            <div className="flex gap-2">
-                                <input className="input-ios font-black border-white shadow-sm" placeholder="名字..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                        <div className="relative">
+                            <label className="text-[9px] font-black text-gray-400 ml-2">顧客搜尋</label>
+                            <div className="flex gap-1">
+                                <input className="input-ios text-xs font-black flex-1" placeholder="輸入名字..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                                 {customerType === '會員' && searchQuery && (
-                                    <button onClick={() => { onAddCustomer({name: searchQuery}); setActiveTab('s4'); }} className="bg-green-500 text-white w-12 rounded-xl shadow-lg flex items-center justify-center active:scale-90 transition-all border border-white/20">
-                                        <Icon name="check" size={20}/>
-                                    </button>
+                                    <button onClick={handleQuickAddCustomer} className="bg-green-500 text-white w-10 rounded-xl flex items-center justify-center shadow-lg active:scale-90"><Icon name="check" size={16}/></button>
                                 )}
                             </div>
                             {suggestions.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 z-[100] bg-white/95 backdrop-blur-xl mt-1 p-2 rounded-2xl shadow-2xl border border-white">
-                                    {suggestions.map(c => (
-                                        <div key={c.id} onClick={() => setSearchQuery(c.name)} className="p-3 hover:bg-gold/10 rounded-xl cursor-pointer flex justify-between items-center transition-all">
-                                            <b className="text-gray-800 text-sm">{c.name}</b>
-                                            <span className="text-[10px] text-gray-400 font-black">{c.phone}</span>
-                                        </div>
-                                    ))}
+                                <div className="crystal-menu top-full w-full z-50">
+                                    {suggestions.map(c => <div key={c.id} onClick={() => setSearchQuery(c.name)} className="crystal-option text-xs flex justify-between"><b>{c.name}</b><span>{c.phone}</span></div>)}
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto space-y-3 mb-5 pr-1">
+                    {/* 項目列表 */}
+                    <div className="flex-1 overflow-y-auto space-y-2 mb-4 pr-1">
                         {orderItems.map(item => (
-                            <div key={item.orderId} className="flex justify-between items-center bg-white/60 p-5 rounded-[2.5rem] border border-white shadow-sm">
-                                <div className="flex-1" onClick={() => setEditingItem(item)}>
-                                    <div className="text-md font-black text-gray-800 italic">{item.name}</div>
+                            <div key={item.orderId} className="flex justify-between items-center bg-white/60 p-4 rounded-[1.5rem] border border-white shadow-sm">
+                                <div className="flex-1">
+                                    <div className="text-sm font-black text-gray-800">{item.name}</div>
+                                    <div className="text-[9px] text-gray-400 font-bold">協助: {item.assistant} | 折扣: -${item.discount}</div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <b className="text-xl font-black text-[#D4AF37]">${item.finalPrice}</b>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => setEditingItem(item)} className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-gray-400 hover:text-blue-500 shadow-sm border border-white"><Icon name="edit-3" size={14}/></button>
-                                        <button onClick={() => removeItem(item.orderId, item.name)} className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-red-300 hover:text-red-500 shadow-sm border border-white"><Icon name="trash-2" size={14}/></button>
-                                    </div>
+                                <div className="flex items-center gap-2">
+                                    <b className="text-lg font-black text-gold-gradient">${item.finalPrice}</b>
+                                    <button onClick={() => setEditingItem(item)} className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-400 shadow-sm border border-white"><Icon name="edit-3" size={12}/></button>
+                                    <button onClick={() => setOrderItems(orderItems.filter(i => i.orderId !== item.orderId))} className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-red-300 shadow-sm border border-white"><Icon name="trash-2" size={12}/></button>
                                 </div>
                             </div>
                         ))}
                     </div>
 
-                    <div className="pt-4 border-t border-white/50">
-                        {/* ⚡️ 靈魂回歸：支付方式選擇 */}
-                        <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
-                            {['現金', 'LinePay', '街口', '信用卡'].map(p => (
-                                <button key={p} onClick={() => setPayMethod(p)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all border shadow-sm ${payMethod === p ? 'bg-black text-[#D4AF37] border-black' : 'bg-white text-gray-400 border-white'}`}>{p}</button>
-                            ))}
+                    {/* 底部收銀區 */}
+                    <div className="pt-4 border-t border-white/50 space-y-4">
+                        <div className="flex justify-between items-end px-2">
+                            <span className="text-[10px] font-black text-gray-400 uppercase italic">Total Amount</span>
+                            <span className="text-5xl font-black text-gold-gradient italic">${totalAmount}</span>
                         </div>
-
-                        {/* ⚡️ 靈魂回歸：收銀找零區 */}
-                        {payMethod === '現金' && (
-                            <div className="grid grid-cols-2 gap-4 mb-5 animate-fade-in">
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-gray-400 ml-4 italic">Received</label>
-                                    <input className="input-ios text-xl font-black text-green-600 border-white shadow-inner bg-white/80" type="number" value={cashIn} onChange={e => setCashIn(e.target.value)} />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-gray-400 ml-4 italic">Change</label>
-                                    <div className="input-ios text-xl font-black text-red-500 border-white flex items-center shadow-inner bg-white/80">${change}</div>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="flex justify-between items-end mb-6 px-4">
-                            <span className="text-gray-400 font-black text-xs uppercase italic tracking-widest">Grand Total</span>
-                            <span className="text-6xl font-black text-gold-gradient tracking-tighter italic">${totalAmount}</span>
-                        </div>
-
-                        <div className="flex gap-3">
-                            <button onClick={() => setShowReceipt(true)} className="w-20 h-20 btn-glass-white flex items-center justify-center text-[#D4AF37] shadow-xl border-white"><Icon name="qr-code" size={32}/></button>
-                            <button onClick={() => { if(orderItems.length > 0) setShowConfirmModal(true); }} className="flex-1 py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-[2.5rem] text-2xl font-black shadow-2xl active:scale-95 transition-all italic uppercase tracking-widest border border-white/10">Confirm & Save</button>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button onClick={() => setShowReceipt(true)} className="btn-glass-white py-4 flex items-center justify-center gap-2 font-black text-[#D4AF37]"><Icon name="qr-code" size={20}/> QR碼</button>
+                            <button onClick={() => {if(orderItems.length>0) setShowConfirmModal(true)}} className="bg-[#1C1C1E] text-[#D4AF37] py-4 rounded-2xl font-black text-lg shadow-xl active:scale-95 italic">確認並結帳</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* ⚡️ 二次確認 Modal */}
-            {showConfirmModal && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[8000] flex items-center justify-center p-6">
-                    <div className="liquid-glass w-full max-w-md p-12 bg-white animate-pop border-white text-center shadow-2xl">
-                        <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <Icon name="help-circle" size={48} color="#D4AF37"/>
+            {/* --- 修改金額、協助人員、打折視窗 --- */}
+            {editingItem && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[5000] flex items-center justify-center p-4">
+                    <div className="liquid-glass w-full max-w-md p-10 bg-[#F2F2F7] border-white shadow-2xl animate-pop-in">
+                        <h3 className="text-xl font-black text-center mb-8 italic text-gold-gradient uppercase tracking-widest">項目調整</h3>
+                        <div className="space-y-5">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-gray-400 ml-3">協助人員</label>
+                                    <select className="input-ios text-xs font-black" value={editingItem.assistant} 
+                                        onChange={e => setEditingItem({...editingItem, assistant: e.target.value})}>
+                                        <option value="無">無</option>
+                                        {staffList.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-gray-400 ml-3">打折 (%)</label>
+                                    <input className="input-ios text-xs font-black" type="number" value={editingItem.discountRate} 
+                                        onChange={e => {
+                                            const rate = parseInt(e.target.value) || 0;
+                                            const newPrice = Math.round((editingItem.originalPrice * rate) / 100);
+                                            setEditingItem({...editingItem, discountRate: rate, finalPrice: newPrice});
+                                        }} />
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black text-gray-400 ml-3">折扣金額 (直接扣除)</label>
+                                <input className="input-ios text-xs font-black" type="number" value={editingItem.discount} 
+                                    onChange={e => {
+                                        const disc = parseInt(e.target.value) || 0;
+                                        setEditingItem({...editingItem, discount: disc, finalPrice: editingItem.originalPrice - disc});
+                                    }} />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black text-gray-400 ml-3">最終結帳金額</label>
+                                <input className="input-ios text-xl font-black text-gold-gradient" type="number" value={editingItem.finalPrice} 
+                                    onChange={e => setEditingItem({...editingItem, finalPrice: parseInt(e.target.value) || 0})} />
+                            </div>
+                            <div className="flex gap-3 pt-4">
+                                <button onClick={() => setEditingItem(null)} className="flex-1 py-4 font-black text-gray-400">取消</button>
+                                <button onClick={() => updateItemDetail(editingItem)} className="flex-[2] py-4 bg-black text-[#D4AF37] rounded-xl font-black shadow-lg">確認修改</button>
+                            </div>
                         </div>
-                        <h3 className="text-3xl font-black text-gray-800 mb-2">確認結帳？</h3>
-                        <p className="text-gray-400 font-bold mb-10 italic">顧客：{searchQuery || "一般散客"} | 金額：${totalAmount}</p>
-                        <div className="flex gap-4">
-                            <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-5 font-black text-gray-400 uppercase italic">Cancel</button>
-                            <button onClick={executeCheckout} disabled={isProcessing} className="flex-[2] py-5 bg-[#1C1C1E] text-[#D4AF37] rounded-2xl text-xl font-black shadow-xl uppercase italic">Yes, Checkout</button>
+                    </div>
+                </div>
+            )}
+
+            {/* --- 找零收銀視窗 --- */}
+            {showConfirmModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[6000] flex items-center justify-center p-6">
+                    <div className="liquid-glass w-full max-w-sm p-10 bg-white shadow-2xl border-white animate-pop-in">
+                        <div className="text-center mb-8">
+                            <span className="text-[10px] font-black text-gray-400 uppercase italic">Payable Amount</span>
+                            <h3 className="text-5xl font-black text-gray-800 italic">${totalAmount}</h3>
+                        </div>
+                        <div className="space-y-6">
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black text-gray-400 ml-4 italic uppercase">Cash Received (收現金)</label>
+                                <input className="input-ios text-3xl font-black text-green-600 border-green-100 bg-green-50/30" type="number" autoFocus value={cashIn} onChange={e => setCashIn(e.target.value)} />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black text-gray-400 ml-4 italic uppercase">Change (應找零)</label>
+                                <div className="input-ios text-3xl font-black text-red-500 border-red-50/50 bg-red-50/20 flex items-center">${change}</div>
+                            </div>
+                            <div className="flex gap-3 pt-6">
+                                <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-4 font-black text-gray-300">返回</button>
+                                <button onClick={handleFinalCheckout} className="flex-[2] py-4 bg-[#1C1C1E] text-[#D4AF37] rounded-2xl text-xl font-black shadow-2xl active:scale-95 italic">完成結帳</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -274,6 +311,7 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
         </div>
     );
 };
+
         // ======================================================
         // --- S2: 查單模組 (鵝卵石珍珠與二次確認) ---
         // ======================================================
@@ -549,10 +587,10 @@ const S3_ReportModule = ({ records, staffList }) => {
     );
 };
        
-        // ==========================================
-// --- s4 顧客管理 (還原 s4.html 極致 Icon Pro 版) ---
-// ==========================================
-const S4_CustomerModule = () => {
+        // ======================================================
+// --- s4 顧客管理 (全通電旗艦版：修正存檔與連動問題) ---
+// ======================================================
+const S4_CustomerModule = ({ customers, setCustomers }) => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const staffData = [
         { name: '所有人', color: '#8E8E93' },
@@ -561,20 +599,6 @@ const S4_CustomerModule = () => {
         { name: 'A-Lin', color: '#FF2D55' }
     ];
 
-    const [customers, setCustomers] = useState([
-        { 
-            id: '1', name: '王大同', phone: '0912-345-678', 
-            birthday: '1995-05-20', visitCount: 5, totalSpend: 12800, 
-            history: [
-                { date: '2026/03/01', item: '精緻剪髮', price: 600 },
-                { date: '2026/01/15', item: '設計全染', price: 2500 },
-                { date: '2025/11/20', item: '頭皮理療', price: 1200 }
-            ],
-            note: '頭皮較敏感，習慣偏右分線。', 
-            staff: '小刀', tag: '常客', color: '#D4AF37'
-        }
-    ]);
-    
     const [showModal, setShowModal] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -586,23 +610,33 @@ const S4_CustomerModule = () => {
     // 處理圖標渲染
     useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [customers, showModal, searchTerm, filterStaff]);
 
+    // ⚡️ 核心修正：所有的 Save 動作都直接回傳給父組件，確保換頁不消失
     const handleSave = () => {
         if (!form.name.trim()) return alert("請輸入姓名");
+        
         if (editingId) {
+            // 修改現有顧客
             setCustomers(prev => prev.map(c => c.id === editingId ? { ...c, ...form } : c));
         } else {
+            // 新增顧客
             const selectedStaff = staffData.find(s => s.name === form.staff);
-            setCustomers(prev => [...prev, { 
-                ...form, id: Date.now().toString(), visitCount: 0, totalSpend: 0, 
-                history: [{ date: '新顧客', item: '初次建立檔案', price: 0 }],
+            const newEntry = { 
+                ...form, 
+                id: Date.now().toString(), 
+                visitCount: 0, 
+                totalSpend: 0, 
+                history: [{ date: new Date().toLocaleDateString(), item: '建立檔案', price: 0 }],
                 color: selectedStaff ? selectedStaff.color : '#D4AF37'
-            }]);
+            };
+            setCustomers(prev => [...prev, newEntry]);
         }
-        setShowModal(false); setEditingId(null); setForm(initialForm);
+        setShowModal(false); 
+        setEditingId(null); 
+        setForm(initialForm);
     };
 
     const filteredCustomers = customers.filter(c => {
-        const matchesSearch = c.name.includes(searchTerm) || c.phone.includes(searchTerm);
+        const matchesSearch = (c.name && c.name.includes(searchTerm)) || (c.phone && c.phone.includes(searchTerm));
         const matchesStaff = filterStaff === '所有人' || c.staff === filterStaff;
         return matchesSearch && matchesStaff;
     });
@@ -625,7 +659,7 @@ const S4_CustomerModule = () => {
                         ))}
                     </div>
                     <div className="relative">
-                        <input className="input-ios md:w-64 pl-12 shadow-sm font-bold" placeholder="搜尋姓名或電話..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                        <input className="input-ios md:w-64 pl-12 shadow-sm font-bold italic" placeholder="搜尋姓名或電話..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                         <div className="absolute left-4 top-3.5 opacity-30"><Icon name="search" size={20} /></div>
                     </div>
                     <button onClick={() => { setShowModal(true); setEditingId(null); setForm(initialForm); }} className="btn-glass-white px-10 py-4 shadow-xl active:scale-95 transition-all text-lg font-black">+ 新增</button>
@@ -636,10 +670,8 @@ const S4_CustomerModule = () => {
             <div className="flex-1 liquid-glass p-10 overflow-y-auto bg-white/20">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                     {filteredCustomers.map(c => (
-                        <div key={c.id} className="liquid-glass p-10 bg-white/40 hover:bg-white/95 transition-all relative group shadow-sm">
-                            {/* 設計師色彩標識背景 */}
+                        <div key={c.id} className="liquid-glass p-10 bg-white/40 hover:bg-white/95 transition-all relative group shadow-sm border-white">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-opacity-10 rounded-bl-[4rem] pointer-events-none" style={{ backgroundColor: c.color }}></div>
-                            
                             <div className="flex justify-between items-start mb-8 relative z-10">
                                 <div>
                                     <span className="px-4 py-1.5 rounded-full text-[10px] font-black text-white mb-3 inline-block shadow-md uppercase tracking-widest" style={{ backgroundColor: c.color }}>{c.tag}</span>
@@ -650,78 +682,56 @@ const S4_CustomerModule = () => {
                                     <button onClick={() => {if(window.confirm(`確定刪除 ${c.name}？`)) setCustomers(prev=>prev.filter(i=>i.id!==c.id))}} className="w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:text-red-500 transition-all"><Icon name="trash-2" size={20} /></button>
                                 </div>
                             </div>
-                            
-                            {/* 消費核心數據 */}
                             <div className="grid grid-cols-1 gap-y-4 text-sm font-bold text-gray-500 mb-8 border-b border-white/50 pb-8">
-                                <div className="flex items-center justify-between"><div className="flex items-center gap-3"><Icon name="phone" size={16} /> <span>聯絡電話</span></div><b className="text-gray-900 text-lg">{c.phone}</b></div>
+                                <div className="flex items-center justify-between"><div className="flex items-center gap-3"><Icon name="phone" size={16} /> <span>聯絡電話</span></div><b className="text-gray-900 text-lg">{c.phone || '未設定'}</b></div>
                                 <div className="flex items-center justify-between"><div className="flex items-center gap-3"><Icon name="user-check" size={16} /> <span>指定設計師</span></div><b className="text-gray-900 text-lg">{c.staff}</b></div>
-                                <div className="flex items-center justify-between"><div className="flex items-center gap-3"><Icon name="calendar" size={16} /> <span>生日日期</span></div><b className="text-gray-400 text-lg">{c.birthday || '未設定'}</b></div>
-                                <div className="flex items-center justify-between pt-2"><div className="flex items-center gap-3"><Icon name="coins" size={16} color="#D4AF37" /> <span>累積消費</span></div><b className="text-yellow-600 text-lg">{c.visitCount} 次 / ${c.totalSpend.toLocaleString()}</b></div>
+                                <div className="flex items-center justify-between pt-2"><div className="flex items-center gap-3"><Icon name="coins" size={16} color="#D4AF37" /> <span>累積消費</span></div><b className="text-yellow-600 text-lg">{c.totalSpend ? c.totalSpend.toLocaleString() : 0}</b></div>
                             </div>
-
-                            {/* 消費軌跡 (History Track) */}
                             <div className="mb-6">
                                 <div className="flex items-center gap-2 mb-4 opacity-40 uppercase tracking-tighter italic">
-                                    <Icon name="activity" size={14} /><span className="text-[10px] font-black">Recent Activity Track</span>
+                                    <Icon name="activity" size={14} /><span className="text-[10px] font-black">History</span>
                                 </div>
                                 <div className="space-y-2">
-                                    {c.history.slice(0,3).map((h, i) => (
-                                        <div key={i} className="flex justify-between items-center px-5 py-3 bg-white/60 rounded-2xl border border-white text-[11px] font-black shadow-sm group-hover:bg-white transition-colors">
+                                    {(c.history || []).slice(0,2).map((h, i) => (
+                                        <div key={i} className="flex justify-between items-center px-5 py-3 bg-white/60 rounded-2xl border border-white text-[11px] font-black">
                                             <span className="text-gray-400">{h.date}</span>
-                                            <span className="text-gray-800">{h.item}</span>
                                             <span className="text-[#D4AF37]">${h.price}</span>
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-
-                            {/* 技術備註 (Technical Note) */}
-                            <div className="p-6 bg-white/30 rounded-[2rem] border border-white border-dashed text-sm text-gray-500 relative">
-                                <div className="flex items-center gap-2 mb-2 opacity-40 uppercase text-[10px] font-black">
-                                    <Icon name="file-text" size={12} /><span>Technical Note</span>
-                                </div>
-                                <p className="italic">{c.note || '尚無紀錄'}</p>
                             </div>
                         </div>
                     ))}
                 </div>
             </div>
 
-            {/* 3. 新增/修改 Modal - 完美對齊 iOS 26 */}
+            {/* 3. Modal */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[2000] flex items-center justify-center p-4">
-                    <div className="liquid-glass w-full max-w-2xl p-12 bg-[#F2F2F7] animate-fade-in max-h-[95vh] overflow-y-auto border-white shadow-2xl">
+                    <div className="liquid-glass w-full max-w-2xl p-12 bg-[#F2F2F7] animate-fade-in border-white shadow-2xl">
                         <h3 className="text-4xl font-black mb-10 text-gold-gradient italic tracking-tighter uppercase">{editingId ? 'Edit Profile' : 'New Customer'}</h3>
                         <div className="space-y-8">
                             <div className="grid grid-cols-2 gap-8">
-                                <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-5 uppercase tracking-widest">顧客姓名</label><input className="input-ios font-black shadow-sm" placeholder="輸入姓名" value={form.name} onChange={e=>setForm({...form, name:e.target.value})}/></div>
-                                <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-5 uppercase tracking-widest">電話號碼</label><input className="input-ios font-black shadow-sm" placeholder="輸入電話" value={form.phone} onChange={e=>setForm({...form, phone:e.target.value})}/></div>
+                                <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-5 uppercase">顧客姓名</label><input className="input-ios font-black shadow-sm italic" value={form.name} onChange={e=>setForm({...form, name:e.target.value})}/></div>
+                                <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-5 uppercase">電話號碼</label><input className="input-ios font-black shadow-sm" value={form.phone} onChange={e=>setForm({...form, phone:e.target.value})}/></div>
                             </div>
-
                             <div className="grid grid-cols-2 gap-8 items-end">
                                 <div className="space-y-2 relative">
-                                    <label className="text-[10px] font-black text-gray-400 ml-5 uppercase tracking-widest">指定設計師</label>
-                                    <div onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="input-ios cursor-pointer flex justify-between items-center bg-white/90 shadow-sm border-white font-black">{form.staff}<Icon name="chevron-down" size={18} color="#D4AF37" /></div>
+                                    <label className="text-[10px] font-black text-gray-400 ml-5 uppercase">指定設計師</label>
+                                    <div onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="input-ios cursor-pointer flex justify-between items-center bg-white shadow-sm border-white font-black">{form.staff}<Icon name="chevron-down" size={18} color="#D4AF37" /></div>
                                     {isDropdownOpen && (
-                                        <div className="crystal-menu border border-white/60">
+                                        <div className="crystal-menu border-white shadow-2xl">
                                             {staffData.filter(s => s.name !== '所有人').map(s => (
-                                                <div key={s.name} onClick={() => { setForm({...form, staff: s.name, color: s.color}); setIsDropdownOpen(false); }} className={`crystal-option ${form.staff === s.name ? 'selected' : ''}`}>
-                                                    <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{background: s.color}}></div>{s.name}</div>
-                                                    {form.staff === s.name && <Icon name="check" size={18} color="white" />}
-                                                </div>
+                                                <div key={s.name} onClick={() => { setForm({...form, staff: s.name, color: s.color}); setIsDropdownOpen(false); }} className={`crystal-option ${form.staff === s.name ? 'selected' : ''}`}>{s.name}</div>
                                             ))}
                                         </div>
                                     )}
                                 </div>
-                                <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-5 uppercase tracking-widest">顧客標籤</label><input className="input-ios font-black shadow-sm" placeholder="如: VIP, 常客" value={form.tag} onChange={e=>setForm({...form, tag:e.target.value})}/></div>
+                                <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-5 uppercase">顧客標籤</label><input className="input-ios font-black shadow-sm" placeholder="VIP..." value={form.tag} onChange={e=>setForm({...form, tag:e.target.value})}/></div>
                             </div>
-
-                            <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-5 uppercase tracking-widest">生日日期</label><input className="input-ios shadow-sm font-black" type="date" value={form.birthday} onChange={e=>setForm({...form, birthday:e.target.value})}/></div>
-                            <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-5 uppercase tracking-widest">技術備註紀錄</label><textarea className="input-ios h-32 font-bold shadow-sm" placeholder="請輸入細節，如：頭皮狀況、分線習慣、藥水配方..." value={form.note} onChange={e=>setForm({...form, note:e.target.value})}></textarea></div>
-
                             <div className="flex gap-6 pt-6">
-                                <button onClick={()=>setShowModal(false)} className="flex-1 py-5 font-black text-gray-400">取消</button>
-                                <button onClick={handleSave} className="flex-[2] py-5 btn-glass-white text-[#D4AF37] shadow-2xl active:scale-95 transition-all text-2xl font-black tracking-widest uppercase italic">Save Data</button>
+                                <button onClick={()=>setShowModal(false)} className="flex-1 py-5 font-black text-gray-400 uppercase italic">Cancel</button>
+                                <button onClick={handleSave} className="flex-[2] py-5 bg-[#1C1C1E] text-[#D4AF37] rounded-2xl font-black text-xl italic shadow-2xl active:scale-95 transition-all">SAVE DATA</button>
                             </div>
                         </div>
                     </div>
@@ -1543,60 +1553,53 @@ const S8_SystemModule = ({ services, setServices }) => {
     );
 };
  // ==========================================
-// --- 核心旗艦 HairSalonApp (全功能回歸版) ---
+// --- 第三部分：核心主程式 (旗艦版 8 大功能全開) ---
 // ==========================================
 const HairSalonApp = () => {
     const [activeTab, setActiveTab] = useState('s1');
     const [records, setRecords] = useState([]);
     
-    // ⚡️ 數據中心：顧客名單 (連動 S1 轉入)
+    // ⚡️ 全域數據中心 (確保 S1、S4 雙向通電)
     const [customers, setCustomers] = useState([
-        { id: '1', name: '王大同', phone: '0912-345-678', staff: '小刀', tag: 'VIP', color: '#D4AF37', history: [] }
+        { id: '1', name: '王大同', phone: '0912-345-678', staff: '小刀', tag: 'VIP', color: '#D4AF37', totalSpend: 12800, history: [] }
     ]);
-    
-    // ⚡️ 數據中心：人員名單 (連動 S1 設計師下拉)
+
+    // 人員資料庫
     const [staffData, setStaffData] = useState([
         { id: '1', name: '小刀', role: '店長', baseSalary: 35000, commissionValue: 35, color: '#D4AF37' },
         { id: '2', name: 'Eason', role: '設計師', baseSalary: 28000, commissionValue: 30, color: '#5856D6' },
         { id: '3', name: 'A-Lin', role: '設計師', baseSalary: 28000, commissionValue: 30, color: '#FF2D55' }
     ]);
 
-    // ⚡️ 數據中心：服務項目 (連動 S8 設定)
+    // 服務項目資料庫
     const [serviceList, setServiceList] = useState([
         { id: 1, name: '精緻剪髮', price: 900, cat: '剪髮', commA: 40, commB: 10, mode: 'percent' },
-        { id: 2, name: '洗髮服務', price: 300, cat: '洗髮', commA: 20, commB: 30, mode: 'percent' }
+        { id: 2, name: '洗髮服務', price: 300, cat: '洗髮', commA: 20, commB: 30, mode: 'percent' },
+        { id: 3, name: '設計全染', price: 2500, cat: '染髮', commA: 35, commB: 10, mode: 'percent' }
     ]);
 
     const staffList = useMemo(() => staffData.map(s => s.name), [staffData]);
 
-    // ⚡️ 電路 1：處理開單結帳與雲端推送
+    // ⚡️ 電路 1：開單結帳 (自動更新消費額 + 雲端推送)
     const onCheckout = async (record) => {
-        setRecords([record, ...records]);
+        setRecords(prev => [record, ...prev]);
+        setCustomers(prev => prev.map(c => 
+            c.name === record.customer ? { ...c, totalSpend: (c.totalSpend || 0) + record.total } : c
+        ));
         const cloudUrl = localStorage.getItem('salon_cloud_url'); 
-        if (cloudUrl) {
-            try {
-                fetch(cloudUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type: 'OrderData', data: record })
-                });
-            } catch (e) { console.error("雲端寫入失敗"); }
-        }
+        if (cloudUrl) { fetch(cloudUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: 'OrderData', data: record }) }); }
     };
 
-    // ⚡️ 電路 2：處理「轉入」功能並自動存入 S4
+    // ⚡️ 電路 2：S1 會員「打勾」轉入 (修正自動存入問題)
     const onAddCustomer = (newCust) => {
-        const fullCust = { ...newCust, id: Date.now().toString(), phone: '尚未填寫', birthday: '', visitCount: 0, totalSpend: 0, history: [], color: '#D4AF37' };
-        setCustomers(prev => [...prev, fullCust]);
-        
-        const cloudUrl = localStorage.getItem('salon_cloud_url'); 
-        if (cloudUrl) {
-            fetch(cloudUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: 'Customers', data: fullCust }) });
-        }
+        setCustomers(prev => {
+            if (prev.find(c => c.name === newCust.name)) return prev;
+            const entry = { id: Date.now().toString(), phone: '', visitCount: 1, totalSpend: 0, history: [], color: '#D4AF37', ...newCust };
+            return [...prev, entry];
+        });
     };
 
-    // ⚡️ 修正：補回消失的選單項目 (s5, s6, s7)
+    // ⚡️ 補回所有 8 個功能選單
     const menuItems = [
         { id: 's1', name: '開單', icon: 'zap' },
         { id: 's2', name: '查單', icon: 'search' },
@@ -1610,7 +1613,7 @@ const HairSalonApp = () => {
 
     return (
         <div className="flex h-screen w-screen bg-[#F2F2F7] overflow-hidden">
-            {/* 左側導覽列 */}
+            {/* 左側導覽列 (全功能回歸) */}
             <aside className="w-24 hover:w-64 bg-white/20 border-r border-gray-200 backdrop-blur-md transition-all duration-300 group overflow-hidden relative shrink-0">
                 <div className="p-6 h-20 flex items-center gap-4 text-[#D4AF37] font-black text-3xl italic relative z-10">S</div>
                 <nav className="flex-1 p-4 space-y-1 relative">
@@ -1629,8 +1632,7 @@ const HairSalonApp = () => {
                 <div className="flex-1 h-full liquid-glass p-12 flex flex-col relative bg-white/40 overflow-hidden shadow-2xl">
                     <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#D4AF37]/10 blur-[120px] rounded-full pointer-events-none"></div>
                     
-                    {/* 模組渲染：確保所有模組都獲得對應的數據接口 */}
-                    {activeTab === 's1' && (<S1_OrderModule staffList={staffList} services={serviceList} onCheckout={onCheckout} setActiveTab={setActiveTab} onAddCustomer={onAddCustomer} customers={customers} />)}
+                    {activeTab === 's1' && <S1_OrderModule staffList={staffList} services={serviceList} onCheckout={onCheckout} setActiveTab={setActiveTab} onAddCustomer={onAddCustomer} customers={customers} />}
                     {activeTab === 's2' && <S2_RecordTrackerModule records={records} onUpdateRecords={setRecords} staffList={staffList} />}
                     {activeTab === 's3' && <S3_ReportModule records={records} staffList={staffList} />}
                     {activeTab === 's4' && <S4_CustomerModule customers={customers} setCustomers={setCustomers} />}
