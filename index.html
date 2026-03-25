@@ -1549,20 +1549,25 @@ const S8_SystemModule = ({ services, setServices }) => {
     );
 };
  // ==========================================
-// --- 核心旗艦 HairSalonApp (全系統通電引擎) ---
+// --- 核心旗艦 HairSalonApp (全功能回歸版) ---
 // ==========================================
 const HairSalonApp = () => {
     const [activeTab, setActiveTab] = useState('s1');
     const [records, setRecords] = useState([]);
+    
+    // ⚡️ 數據中心：顧客名單 (連動 S1 轉入)
     const [customers, setCustomers] = useState([
         { id: '1', name: '王大同', phone: '0912-345-678', staff: '小刀', tag: 'VIP', color: '#D4AF37', history: [] }
     ]);
     
+    // ⚡️ 數據中心：人員名單 (連動 S1 設計師下拉)
     const [staffData, setStaffData] = useState([
         { id: '1', name: '小刀', role: '店長', baseSalary: 35000, commissionValue: 35, color: '#D4AF37' },
-        { id: '2', name: 'Eason', role: '設計師', baseSalary: 28000, commissionValue: 30, color: '#5856D6' }
+        { id: '2', name: 'Eason', role: '設計師', baseSalary: 28000, commissionValue: 30, color: '#5856D6' },
+        { id: '3', name: 'A-Lin', role: '設計師', baseSalary: 28000, commissionValue: 30, color: '#FF2D55' }
     ]);
 
+    // ⚡️ 數據中心：服務項目 (連動 S8 設定)
     const [serviceList, setServiceList] = useState([
         { id: 1, name: '精緻剪髮', price: 900, cat: '剪髮', commA: 40, commB: 10, mode: 'percent' },
         { id: 2, name: '洗髮服務', price: 300, cat: '洗髮', commA: 20, commB: 30, mode: 'percent' }
@@ -1570,7 +1575,7 @@ const HairSalonApp = () => {
 
     const staffList = useMemo(() => staffData.map(s => s.name), [staffData]);
 
-    // ⚡️ 通電電路 1：處理開單結帳與雲端推送
+    // ⚡️ 電路 1：處理開單結帳與雲端推送
     const onCheckout = async (record) => {
         setRecords([record, ...records]);
         const cloudUrl = localStorage.getItem('salon_cloud_url'); 
@@ -1582,39 +1587,40 @@ const HairSalonApp = () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ type: 'OrderData', data: record })
                 });
-                console.log("✅ 單據已推送至雲端試算表");
-            } catch (e) { console.error("雲端存檔失敗"); }
+            } catch (e) { console.error("雲端寫入失敗"); }
         }
     };
 
-    // ⚡️ 通電電路 2：處理「轉入」功能並自動存檔
+    // ⚡️ 電路 2：處理「轉入」功能並自動存入 S4
     const onAddCustomer = (newCust) => {
         const fullCust = { ...newCust, id: Date.now().toString(), phone: '尚未填寫', birthday: '', visitCount: 0, totalSpend: 0, history: [], color: '#D4AF37' };
         setCustomers(prev => [...prev, fullCust]);
         
         const cloudUrl = localStorage.getItem('salon_cloud_url'); 
         if (cloudUrl) {
-            fetch(cloudUrl, { 
-                method: 'POST', 
-                mode: 'no-cors', 
-                body: JSON.stringify({ type: 'Customers', data: fullCust }) 
-            });
-            console.log("✅ 顧客資料已推送至雲端");
+            fetch(cloudUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: 'Customers', data: fullCust }) });
         }
     };
 
+    // ⚡️ 修正：補回消失的選單項目 (s5, s6, s7)
+    const menuItems = [
+        { id: 's1', name: '開單', icon: 'zap' },
+        { id: 's2', name: '查單', icon: 'search' },
+        { id: 's3', name: '報表', icon: 'activity' },
+        { id: 's4', name: '顧客', icon: 'users' },
+        { id: 's5', name: '庫存', icon: 'package' },
+        { id: 's6', name: '人員', icon: 'user' },
+        { id: 's7', name: '支出', icon: 'credit-card' },
+        { id: 's8', name: '系統', icon: 'settings' }
+    ];
+
     return (
         <div className="flex h-screen w-screen bg-[#F2F2F7] overflow-hidden">
+            {/* 左側導覽列 */}
             <aside className="w-24 hover:w-64 bg-white/20 border-r border-gray-200 backdrop-blur-md transition-all duration-300 group overflow-hidden relative shrink-0">
                 <div className="p-6 h-20 flex items-center gap-4 text-[#D4AF37] font-black text-3xl italic relative z-10">S</div>
                 <nav className="flex-1 p-4 space-y-1 relative">
-                    {[
-                        { id: 's1', name: '開單', icon: 'zap' },
-                        { id: 's2', name: '查單', icon: 'search' },
-                        { id: 's3', name: '報表', icon: 'activity' },
-                        { id: 's4', name: '顧客', icon: 'users' },
-                        { id: 's8', name: '系統', icon: 'settings' }
-                    ].map(item => (
+                    {menuItems.map(item => (
                         <button key={item.id} onClick={() => setActiveTab(item.id)} 
                             className={`w-full py-5 px-4 rounded-2xl flex items-center gap-5 relative z-10 transition-all ${activeTab === item.id ? 'bg-white shadow-xl text-black font-black' : 'text-gray-400 font-bold hover:bg-white/30'}`}>
                             <Icon name={item.icon} color={activeTab === item.id ? "#D4AF37" : "#8E8E93"} size={22}/>
@@ -1624,15 +1630,19 @@ const HairSalonApp = () => {
                 </nav>
             </aside>
 
+            {/* 主顯示區 */}
             <main className="flex-1 p-6 overflow-hidden">
                 <div className="flex-1 h-full liquid-glass p-12 flex flex-col relative bg-white/40 overflow-hidden shadow-2xl">
                     <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#D4AF37]/10 blur-[120px] rounded-full pointer-events-none"></div>
                     
-                    {/* 模組渲染：傳入 setActiveTab 與 onAddCustomer 確保電路通順 */}
+                    {/* 模組渲染：確保所有模組都獲得對應的數據接口 */}
                     {activeTab === 's1' && <S1_OrderModule staffList={staffList} services={serviceList} onCheckout={onCheckout} setActiveTab={setActiveTab} onAddCustomer={onAddCustomer} />}
                     {activeTab === 's2' && <S2_RecordTrackerModule records={records} onUpdateRecords={setRecords} staffList={staffList} />}
                     {activeTab === 's3' && <S3_ReportModule records={records} staffList={staffList} />}
                     {activeTab === 's4' && <S4_CustomerModule customers={customers} setCustomers={setCustomers} />}
+                    {activeTab === 's5' && <S5_InventoryModule />}
+                    {activeTab === 's6' && <S6_StaffModule staffData={staffData} setStaffData={setStaffData} />}
+                    {activeTab === 's7' && <S7_ExpenseModule />}
                     {activeTab === 's8' && <S8_SystemModule services={serviceList} setServices={setServiceList} />}
                 </div>
             </main>
