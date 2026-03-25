@@ -62,48 +62,50 @@
             return <i data-lucide={name} className={className} style={{ width: size, height: size, stroke: color, strokeWidth: '2.5px' }}></i>;
         };
  // ======================================================
-// --- S1: 開單模組 (修復搜尋跳掉 + 結帳二次確認版) ---
+// --- S1: 開單模組 (靈魂回歸：實收找零、搜尋修復、二次確認) ---
 // ======================================================
 const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCustomer, customers }) => {
     const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
     const [gender, setGender] = useState('女生');
     const [category, setCategory] = useState('全部');
     const [orderItems, setOrderItems] = useState([]);
+    const [editingItem, setEditingItem] = useState(null);
     const [customerType, setCustomerType] = useState('散客');
     const [searchQuery, setSearchQuery] = useState('');
     const [payMethod, setPayMethod] = useState('現金');
-    const [cashIn, setCashIn] = useState('');
+    const [cashIn, setCashIn] = useState(''); // 實收靈魂
     const [selectedStaff, setSelectedStaff] = useState(staffList[0]);
     const [isStaffOpen, setIsStaffOpen] = useState(false);
     const [showReceipt, setShowReceipt] = useState(false);
     
-    // ⚡️ 狀態：二次確認 Modal
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
 
-    // ⚡️ 優化搜尋邏輯：防止打字時跳掉
+    // --- S1_OrderModule 內部的搜尋邏輯 ---
     const suggestions = useMemo(() => {
-        if (customerType !== '會員' || !searchQuery.trim()) return [];
-        return customers.filter(c => 
-            c.name.includes(searchQuery) || (c.phone && c.phone.includes(searchQuery))
-        );
-    }, [searchQuery, customerType, customers]);
-
+    // ⚡️ 增加保險絲：如果 customers 不存在或是空的，回傳空陣列，不報錯
+    if (customerType !== '會員' || !searchQuery.trim() || !customers) return [];
+    
+    return customers.filter(c => 
+        (c.name && c.name.includes(searchQuery)) || 
+        (c.phone && c.phone.includes(searchQuery))
+    );
+}, [searchQuery, customerType, customers]);
     const addItem = (s) => setOrderItems(prev => [...prev, { ...s, orderId: Date.now(), finalPrice: s.price, assistant: '無' }]);
+    
+    // ⚡️ 補回：二次確認刪除
+    const removeItem = (id, name) => {
+        if (window.confirm(`【確認移除】確定要刪除「${name}」嗎？`)) {
+            setOrderItems(prev => prev.filter(i => i.orderId !== id));
+        }
+    };
+
     const totalAmount = orderItems.reduce((s, i) => s + i.finalPrice, 0);
     const change = cashIn ? Math.max(0, parseInt(cashIn) - totalAmount) : 0;
 
-    const handleAddAndGo = () => {
-        if (!searchQuery.trim()) return;
-        onAddCustomer({ name: searchQuery, staff: selectedStaff, tag: '新轉入' });
-        setActiveTab('s4');
-    };
-
-    // ⚡️ 執行最終結帳 (由確認視窗發起)
     const executeCheckout = async () => {
         if (isProcessing) return;
         setIsProcessing(true);
-        
         const record = {
             id: Date.now().toString(),
             date: orderDate,
@@ -113,13 +115,11 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
             services: orderItems.map(i => i.name),
             payment: payMethod
         };
-
         await onCheckout(record);
-        
         setTimeout(() => {
             setIsProcessing(false);
-            setShowConfirmModal(false); // 關閉確認窗
-            setShowReceipt(true);      // 顯示數位收據
+            setShowConfirmModal(false);
+            setShowReceipt(true);
             setOrderItems([]);
             setCashIn('');
             setSearchQuery('');
@@ -134,7 +134,7 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
                     <h1 className="text-5xl font-black text-gold-gradient tracking-tighter italic">s1 開單結帳</h1>
                     <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest ml-1">Precision System</p>
                 </div>
-                <input type="date" className="input-ios w-40 text-xs font-black bg-white/60" value={orderDate} onChange={e => setOrderDate(e.target.value)} />
+                <input type="date" className="input-ios w-40 text-xs font-black bg-white/60 border-white shadow-sm" value={orderDate} onChange={e => setOrderDate(e.target.value)} />
             </div>
 
             <div className="flex-1 flex flex-col md:flex-row gap-6 min-h-0">
@@ -147,8 +147,8 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
                     </div>
                     <div className="grid grid-cols-2 gap-4 overflow-y-auto pr-1">
                         {services.filter(s => category === '全部' || s.cat === category).map(s => (
-                            <button key={s.id} onClick={() => addItem(s)} className="service-card liquid-glass p-6 bg-white/40 hover:bg-white/80 text-left transition-all italic">
-                                <span className="text-[10px] font-black text-gray-400 uppercase">{s.cat}</span>
+                            <button key={s.id} onClick={() => addItem(s)} className="service-card liquid-glass p-6 bg-white/40 hover:bg-white/80 text-left transition-all">
+                                <span className="text-[10px] font-black text-gray-400 uppercase italic opacity-60">{s.cat}</span>
                                 <h3 className="text-xl font-black text-[#1C1C1E]">{s.name}</h3>
                                 <b className="text-[#D4AF37] font-black">${s.price}</b>
                             </button>
@@ -160,7 +160,7 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
                 <div className="flex-1 liquid-glass p-8 flex flex-col h-full bg-white/30 relative shadow-2xl">
                     <div className="flex justify-between items-center mb-5">
                         <h2 className="text-2xl font-black italic tracking-tighter">結帳明細</h2>
-                        <div className="flex bg-gray-200/40 p-1 rounded-xl">
+                        <div className="flex bg-gray-200/40 p-1 rounded-xl shadow-inner">
                             {['散客', '會員'].map(t => (
                                 <button key={t} onClick={() => { setCustomerType(t); setSearchQuery(''); }} className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${customerType === t ? 'bg-white shadow-sm text-black' : 'text-gray-400'}`}>{t}</button>
                             ))}
@@ -170,31 +170,30 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
                     <div className="grid grid-cols-2 gap-4 mb-5 items-end">
                         <div className="space-y-1 relative">
                             <label className="text-[9px] font-black text-gray-400 ml-4">設計師</label>
-                            <div onClick={() => setIsStaffOpen(!isStaffOpen)} className="input-ios cursor-pointer flex justify-between items-center bg-white shadow-sm font-black">
+                            <div onClick={() => setIsStaffOpen(!isStaffOpen)} className="input-ios cursor-pointer flex justify-between items-center bg-white shadow-sm border-white font-black">
                                 <span>{selectedStaff}</span><Icon name="chevron-down" size={16} color="#D4AF37" />
                             </div>
                             {isStaffOpen && (
-                                <div className="crystal-menu shadow-2xl">
+                                <div className="crystal-menu shadow-2xl border-white">
                                     {staffList.map(s => (<div key={s} onClick={() => { setSelectedStaff(s); setIsStaffOpen(false); }} className="crystal-option">{s}</div>))}
                                 </div>
                             )}
                         </div>
 
                         <div className="space-y-1 relative">
-                            <label className="text-[9px] font-black text-gray-400 ml-4">{customerType}輸入</label>
+                            <label className="text-[9px] font-black text-gray-400 ml-4">{customerType}搜尋</label>
                             <div className="flex gap-2">
-                                <input className="input-ios font-black border-white shadow-sm" placeholder="輸入名字..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                                <input className="input-ios font-black border-white shadow-sm" placeholder="名字..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                                 {customerType === '會員' && searchQuery && (
-                                    <button onClick={suggestions.length > 0 ? null : handleAddAndGo} className={`w-12 rounded-xl shadow-lg flex items-center justify-center active:scale-90 transition-all ${suggestions.length > 0 ? 'bg-gray-200 text-gray-400' : 'bg-green-500 text-white'}`}>
-                                        <Icon name={suggestions.length > 0 ? "search" : "check"} size={20}/>
+                                    <button onClick={() => { onAddCustomer({name: searchQuery}); setActiveTab('s4'); }} className="bg-green-500 text-white w-12 rounded-xl shadow-lg flex items-center justify-center active:scale-90 transition-all border border-white/20">
+                                        <Icon name="check" size={20}/>
                                     </button>
                                 )}
                             </div>
-                            
                             {suggestions.length > 0 && (
                                 <div className="absolute top-full left-0 right-0 z-[100] bg-white/95 backdrop-blur-xl mt-1 p-2 rounded-2xl shadow-2xl border border-white">
                                     {suggestions.map(c => (
-                                        <div key={c.id} onClick={() => { setSearchQuery(c.name); }} className="p-3 hover:bg-gold/10 rounded-xl cursor-pointer flex justify-between items-center border-b border-gray-50 last:border-0">
+                                        <div key={c.id} onClick={() => setSearchQuery(c.name)} className="p-3 hover:bg-gold/10 rounded-xl cursor-pointer flex justify-between items-center transition-all">
                                             <b className="text-gray-800 text-sm">{c.name}</b>
                                             <span className="text-[10px] text-gray-400 font-black">{c.phone}</span>
                                         </div>
@@ -206,60 +205,72 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
 
                     <div className="flex-1 overflow-y-auto space-y-3 mb-5 pr-1">
                         {orderItems.map(item => (
-                            <div key={item.orderId} className="flex justify-between items-center bg-white/60 p-4 rounded-2xl border border-white">
-                                <b className="font-black text-gray-800 italic">{item.name}</b>
-                                <b className="text-[#D4AF37] font-black">${item.finalPrice}</b>
+                            <div key={item.orderId} className="flex justify-between items-center bg-white/60 p-5 rounded-[2.5rem] border border-white shadow-sm">
+                                <div className="flex-1" onClick={() => setEditingItem(item)}>
+                                    <div className="text-md font-black text-gray-800 italic">{item.name}</div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <b className="text-xl font-black text-[#D4AF37]">${item.finalPrice}</b>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setEditingItem(item)} className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-gray-400 hover:text-blue-500 shadow-sm border border-white"><Icon name="edit-3" size={14}/></button>
+                                        <button onClick={() => removeItem(item.orderId, item.name)} className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-red-300 hover:text-red-500 shadow-sm border border-white"><Icon name="trash-2" size={14}/></button>
+                                    </div>
+                                </div>
                             </div>
                         ))}
                     </div>
 
                     <div className="pt-4 border-t border-white/50">
+                        {/* ⚡️ 靈魂回歸：支付方式選擇 */}
+                        <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
+                            {['現金', 'LinePay', '街口', '信用卡'].map(p => (
+                                <button key={p} onClick={() => setPayMethod(p)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all border shadow-sm ${payMethod === p ? 'bg-black text-[#D4AF37] border-black' : 'bg-white text-gray-400 border-white'}`}>{p}</button>
+                            ))}
+                        </div>
+
+                        {/* ⚡️ 靈魂回歸：收銀找零區 */}
+                        {payMethod === '現金' && (
+                            <div className="grid grid-cols-2 gap-4 mb-5 animate-fade-in">
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-gray-400 ml-4 italic">Received</label>
+                                    <input className="input-ios text-xl font-black text-green-600 border-white shadow-inner bg-white/80" type="number" value={cashIn} onChange={e => setCashIn(e.target.value)} />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-gray-400 ml-4 italic">Change</label>
+                                    <div className="input-ios text-xl font-black text-red-500 border-white flex items-center shadow-inner bg-white/80">${change}</div>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="flex justify-between items-end mb-6 px-4">
-                            <span className="text-gray-400 font-black text-xs uppercase italic">Grand Total</span>
+                            <span className="text-gray-400 font-black text-xs uppercase italic tracking-widest">Grand Total</span>
                             <span className="text-6xl font-black text-gold-gradient tracking-tighter italic">${totalAmount}</span>
                         </div>
 
                         <div className="flex gap-3">
-                            <button onClick={() => setShowReceipt(true)} className="w-20 h-20 btn-glass-white flex items-center justify-center text-[#D4AF37] shadow-xl"><Icon name="qr-code" size={32}/></button>
-                            <button 
-                                onClick={() => { if(orderItems.length > 0) setShowConfirmModal(true); }} 
-                                className="flex-1 py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-[2.5rem] text-2xl font-black shadow-2xl active:scale-95 transition-all italic uppercase border border-white/10"
-                            >
-                                Confirm Order
-                            </button>
+                            <button onClick={() => setShowReceipt(true)} className="w-20 h-20 btn-glass-white flex items-center justify-center text-[#D4AF37] shadow-xl border-white"><Icon name="qr-code" size={32}/></button>
+                            <button onClick={() => { if(orderItems.length > 0) setShowConfirmModal(true); }} className="flex-1 py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-[2.5rem] text-2xl font-black shadow-2xl active:scale-95 transition-all italic uppercase tracking-widest border border-white/10">Confirm & Save</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* ⚡️ 二次確認 Modal (極致黑金版) */}
+            {/* ⚡️ 二次確認 Modal */}
             {showConfirmModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[8000] flex items-center justify-center p-6">
-                    <div className="liquid-glass w-full max-w-md p-12 bg-white animate-pop border-white text-center shadow-[0_50px_100px_rgba(0,0,0,0.4)]">
-                        <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-8">
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[8000] flex items-center justify-center p-6">
+                    <div className="liquid-glass w-full max-w-md p-12 bg-white animate-pop border-white text-center shadow-2xl">
+                        <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-6">
                             <Icon name="help-circle" size={48} color="#D4AF37"/>
                         </div>
-                        <h3 className="text-3xl font-black text-gray-800 mb-4 tracking-tighter">確認結帳？</h3>
-                        <p className="text-gray-400 font-bold mb-10 italic">
-                            顧客：{searchQuery || "一般散客"} <br/>
-                            總金額：<span className="text-gray-800 text-2xl not-italic">${totalAmount}</span>
-                        </p>
-                        
+                        <h3 className="text-3xl font-black text-gray-800 mb-2">確認結帳？</h3>
+                        <p className="text-gray-400 font-bold mb-10 italic">顧客：{searchQuery || "一般散客"} | 金額：${totalAmount}</p>
                         <div className="flex gap-4">
                             <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-5 font-black text-gray-400 uppercase italic">Cancel</button>
-                            <button 
-                                onClick={executeCheckout} 
-                                disabled={isProcessing}
-                                className={`flex-[2] py-5 rounded-2xl text-xl font-black shadow-xl transition-all uppercase italic ${isProcessing ? 'bg-gray-200 text-gray-400' : 'bg-[#1C1C1E] text-[#D4AF37] active:scale-95'}`}
-                            >
-                                {isProcessing ? 'Processing...' : 'Yes, Checkout'}
-                            </button>
+                            <button onClick={executeCheckout} disabled={isProcessing} className="flex-[2] py-5 bg-[#1C1C1E] text-[#D4AF37] rounded-2xl text-xl font-black shadow-xl uppercase italic">Yes, Checkout</button>
                         </div>
                     </div>
                 </div>
             )}
-
-            {/* 數位收據 Modal 與原本一致... */}
         </div>
     );
 };
@@ -1619,7 +1630,7 @@ const HairSalonApp = () => {
                     <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#D4AF37]/10 blur-[120px] rounded-full pointer-events-none"></div>
                     
                     {/* 模組渲染：確保所有模組都獲得對應的數據接口 */}
-                    {activeTab === 's1' && <S1_OrderModule staffList={staffList} services={serviceList} onCheckout={onCheckout} setActiveTab={setActiveTab} onAddCustomer={onAddCustomer} />}
+                    {activeTab === 's1' && (<S1_OrderModule staffList={staffList} services={serviceList} onCheckout={onCheckout} setActiveTab={setActiveTab} onAddCustomer={onAddCustomer} customers={customers} />)}
                     {activeTab === 's2' && <S2_RecordTrackerModule records={records} onUpdateRecords={setRecords} staffList={staffList} />}
                     {activeTab === 's3' && <S3_ReportModule records={records} staffList={staffList} />}
                     {activeTab === 's4' && <S4_CustomerModule customers={customers} setCustomers={setCustomers} />}
