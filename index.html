@@ -62,7 +62,7 @@
             return <i data-lucide={name} className={className} style={{ width: size, height: size, stroke: color, strokeWidth: '2.5px' }}></i>;
         };
  // ======================================================
-// --- S1: 開單模組 (性別補回 + 金額修正 + 修改件中文化版) ---
+// --- S1: 開單模組 (修復 QR 碼與中文化介面) ---
 // ======================================================
 const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCustomer, customers }) => {
     const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
@@ -99,35 +99,30 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
 
     return (
         <div className="h-full flex flex-col gap-6 animate-fade-in relative">
-            {/* Header */}
             <div className="flex justify-between items-end mb-1">
                 <div>
                     <h1 className="text-5xl font-black text-gold-gradient tracking-tighter italic">s1 開單結帳</h1>
-                    <p className="text-gray-400 font-bold text-[10px] uppercase ml-1">Precision Commerce System</p>
+                    <p className="text-gray-400 font-bold text-[10px] uppercase ml-1 opacity-60">Precision System</p>
                 </div>
                 <input type="date" className="input-ios w-40 text-xs font-black bg-white/60 border-white shadow-sm" value={orderDate} onChange={e => setOrderDate(e.target.value)} />
             </div>
 
             <div className="flex-1 flex flex-col md:flex-row gap-6 min-h-0">
-                {/* 左側項目選擇 */}
                 <div className="flex-[1.2] liquid-glass p-8 bg-white/20 overflow-hidden flex flex-col">
-                    {/* ⚡️ 性別標籤 (補回) */}
                     <div className="flex flex-wrap gap-2 mb-4">
                         {['男生', '女生', '小孩', '長輩'].map(t => (
                             <button key={t} onClick={() => setGender(t)} className={`pill-toggle ${gender === t ? 'active' : ''}`}>{t}</button>
                         ))}
                     </div>
-
                     <div className="flex gap-2 mb-6 border-b border-white/30 overflow-x-auto pb-2">
                         {['全部', '洗髮', '剪髮', '燙髮', '染髮', '護理', '販賣'].map(c => (
                             <button key={c} onClick={() => setCategory(c)} className={`pill-toggle whitespace-nowrap ${category === c ? 'active' : ''}`}>{c}</button>
                         ))}
                     </div>
-
                     <div className="grid grid-cols-2 gap-4 overflow-y-auto pr-1">
                         {services.filter(s => category === '全部' || s.cat === category).map(s => (
                             <button key={s.id} onClick={() => addItem(s)} className="service-card liquid-glass p-6 bg-white/40 hover:bg-white/80 text-left transition-all italic">
-                                <span className="text-[10px] font-black text-gray-400 uppercase italic">{s.cat}</span>
+                                <span className="text-[10px] font-black text-gray-400 uppercase italic opacity-60">{s.cat}</span>
                                 <h3 className="text-xl font-black text-[#1C1C1E]">{s.name}</h3>
                                 <b className="text-[#D4AF37] font-black">${s.price}</b>
                             </button>
@@ -135,7 +130,6 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
                     </div>
                 </div>
 
-                {/* 右側結帳清單 */}
                 <div className="flex-1 liquid-glass p-8 bg-white/30 relative shadow-2xl flex flex-col">
                     <div className="flex justify-between items-center mb-5">
                         <h2 className="text-2xl font-black italic">結帳明細</h2>
@@ -148,7 +142,7 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
 
                     <div className="grid grid-cols-2 gap-4 mb-5 items-end relative">
                         <div className="space-y-1 relative">
-                            <label className="text-[9px] font-black text-gray-400 ml-4 uppercase">卡位設計師</label>
+                            <label className="text-[9px] font-black text-gray-400 ml-4 uppercase">設計師</label>
                             <div onClick={() => setIsStaffOpen(!isStaffOpen)} className="input-ios cursor-pointer flex justify-between items-center bg-white shadow-sm border-white font-black">
                                 <span>{selectedStaff}</span><Icon name="chevron-down" size={16} color="#D4AF37" />
                             </div>
@@ -161,7 +155,7 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
                         <div className="space-y-1 relative">
                             <label className="text-[9px] font-black text-gray-400 ml-4 uppercase">{customerType}搜尋</label>
                             <div className="flex gap-2">
-                                <input className="input-ios font-black border-white shadow-sm" placeholder="輸入姓名..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                                <input className="input-ios font-black border-white shadow-sm" placeholder="名字..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                                 {customerType === '會員' && searchQuery && (
                                     <button onClick={() => { onAddCustomer({name: searchQuery}); setActiveTab('s4'); }} className="bg-green-500 text-white w-12 rounded-xl shadow-lg flex items-center justify-center active:scale-90 border border-white/20">
                                         <Icon name="check" size={20}/>
@@ -180,16 +174,16 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
 
                     <div className="flex-1 overflow-y-auto space-y-3 mb-5 pr-1">
                         {orderItems.map(item => (
-                            <div key={item.orderId} className="flex justify-between items-center bg-white/60 p-5 rounded-[2.5rem] border border-white shadow-sm hover:translate-x-1 transition-all">
-                                <div className="flex-1" onClick={() => setEditingItem(item)}>
+                            <div key={item.orderId} className="flex justify-between items-center bg-white/60 p-5 rounded-[2.5rem] border border-white shadow-sm">
+                                <div className="flex-1">
                                     <div className="text-md font-black text-gray-800 italic">{item.name}</div>
-                                    <div className="text-[8px] text-blue-500 font-bold uppercase tracking-widest mt-1">助: {item.assistant}</div>
+                                    <div className="text-[8px] text-blue-500 font-bold mt-1">助: {item.assistant}</div>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <b className="text-xl font-black text-[#D4AF37]">${item.finalPrice}</b>
                                     <div className="flex gap-2">
                                         <button onClick={() => setEditingItem(item)} className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-gray-400 hover:text-blue-500 shadow-sm border border-white"><Icon name="edit-3" size={14}/></button>
-                                        <button onClick={() => removeItem(item.orderId, item.name)} className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-red-300 hover:text-red-500 shadow-sm border border-white"><Icon name="trash-2" size={14}/></button>
+                                        <button onClick={() => { if(window.confirm('移除項目？')) setOrderItems(orderItems.filter(i=>i.orderId!==item.orderId)) }} className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-red-300 hover:text-red-500 shadow-sm border border-white"><Icon name="trash-2" size={14}/></button>
                                     </div>
                                 </div>
                             </div>
@@ -197,7 +191,7 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
                     </div>
 
                     <div className="pt-4 border-t border-white/50">
-                        <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
+                        <div className="flex gap-2 mb-4">
                             {['現金', 'LinePay', '街口', '信用卡'].map(p => (
                                 <button key={p} onClick={() => setPayMethod(p)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all border shadow-sm ${payMethod === p ? 'bg-black text-[#D4AF37] border-black' : 'bg-white text-gray-400 border-white'}`}>{p}</button>
                             ))}
@@ -206,27 +200,27 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
                         {payMethod === '現金' && (
                             <div className="grid grid-cols-2 gap-4 mb-5 animate-fade-in">
                                 <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-gray-400 ml-4 italic">Received</label>
+                                    <label className="text-[9px] font-black text-gray-400 ml-4 italic">實收現金</label>
                                     <input className="input-ios text-xl font-black text-green-600 border-white shadow-inner bg-white/80" type="number" value={cashIn} onChange={e => setCashIn(e.target.value)} placeholder="$..." />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-gray-400 ml-4 italic">Change</label>
-                                    <div className="input-ios text-xl font-black text-red-500 border-white flex items-center shadow-inner bg-white/80 font-black">${change}</div>
+                                    <label className="text-[9px] font-black text-gray-400 ml-4 italic">找零金額</label>
+                                    <div className="input-ios text-xl font-black text-red-500 border-white flex items-center bg-white/80 font-black">${change}</div>
                                 </div>
                             </div>
                         )}
 
                         <div className="flex justify-between items-end mb-6 px-4">
-                            <span className="text-gray-400 font-black text-xs uppercase italic tracking-widest">Grand Total</span>
-                            {/* ⚡️ 修正：確保不顯示多餘的 0 */}
+                            <span className="text-gray-400 font-black text-xs uppercase italic tracking-widest">總計金額</span>
                             <span className="text-6xl font-black text-gold-gradient tracking-tighter italic">
                                 ${Number(totalAmount).toLocaleString()}
                             </span>
                         </div>
 
                         <div className="flex gap-3">
+                            {/* ⚡️ QR 碼按鈕現在會開啟收據 Modal */}
                             <button onClick={() => setShowReceipt(true)} className="w-20 h-20 btn-glass-white flex items-center justify-center text-[#D4AF37] shadow-xl border-white active:scale-95"><Icon name="qr-code" size={32}/></button>
-                            <button onClick={() => { if(orderItems.length > 0) setShowConfirmModal(true); }} className="flex-1 py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-[2.5rem] text-2xl font-black shadow-2xl active:scale-95 transition-all italic uppercase tracking-widest border border-white/10">
+                            <button onClick={() => { if(orderItems.length > 0) setShowConfirmModal(true); }} className="flex-1 py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-[2.5rem] text-2xl font-black shadow-2xl active:scale-95 transition-all border border-white/10">
                                 確認結帳
                             </button>
                         </div>
@@ -234,22 +228,20 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
                 </div>
             </div>
 
-            {/* ⚡️ 修改項目 Modal (對調位置 + 中文化) */}
+            {/* 修改項目 Modal */}
             {editingItem && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[5000] flex items-center justify-center p-4">
                     <div className="liquid-glass w-full max-w-lg p-12 bg-[#F2F2F7] border-white shadow-2xl animate-fade-in">
                         <h3 className="text-3xl font-black text-gold-gradient mb-10 text-center italic uppercase">項目調整</h3>
                         <div className="space-y-8">
                             <div className="grid grid-cols-2 gap-8">
-                                {/* 修改金額移至左邊 */}
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-400 ml-5 uppercase">修改金額</label>
-                                    <input className="input-ios text-2xl font-black text-[#D4AF37] bg-white border-white shadow-inner" type="number" value={editingItem.finalPrice} onChange={e => setEditingItem({...editingItem, finalPrice: parseInt(e.target.value)||0})} />
+                                    <input className="input-ios text-2xl font-black text-[#D4AF37] bg-white shadow-inner" type="number" value={editingItem.finalPrice} onChange={e => setEditingItem({...editingItem, finalPrice: parseInt(e.target.value)||0})} />
                                 </div>
-                                {/* 協助助理移至右邊 */}
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-blue-500 ml-5 uppercase">協助助理</label>
-                                    <select className="input-ios font-black bg-white border-white shadow-sm" value={editingItem.assistant} onChange={e => setEditingItem({...editingItem, assistant: e.target.value})}>
+                                    <select className="input-ios font-black bg-white shadow-sm" value={editingItem.assistant} onChange={e => setEditingItem({...editingItem, assistant: e.target.value})}>
                                         <option value="無">無</option>
                                         {staffList.map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
@@ -259,29 +251,36 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
                                 <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-5 uppercase italic">折讓現金 $</label><input className="input-ios bg-white" type="number" placeholder="折扣 $..." onChange={e => setEditingItem({...editingItem, finalPrice: editingItem.originalPrice - (parseInt(e.target.value)||0)})} /></div>
                                 <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-5 uppercase italic">打折輸入 (折)</label><input className="input-ios bg-white" type="number" placeholder="折數..." onChange={e => setEditingItem({...editingItem, finalPrice: Math.round(editingItem.originalPrice * (parseInt(e.target.value)||100) / 100)})} /></div>
                             </div>
-                            <button onClick={() => { setOrderItems(prev => prev.map(i => i.orderId === editingItem.orderId ? editingItem : i)); setEditingItem(null); }} className="w-full py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-[2.5rem] text-xl font-black shadow-xl uppercase">
-                                確定修改
-                            </button>
+                            <button onClick={() => { setOrderItems(prev => prev.map(i => i.orderId === editingItem.orderId ? editingItem : i)); setEditingItem(null); }} className="w-full py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-[2.5rem] text-xl font-black shadow-xl uppercase">確定修改</button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* 二次確認 Modal (中文化) */}
+            {/* 二次確認 Modal */}
             {showConfirmModal && (
                 <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[8000] flex items-center justify-center p-6">
                     <div className="liquid-glass w-full max-w-md p-12 bg-white text-center shadow-2xl border-white">
-                        <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <Icon name="help-circle" size={48} color="#D4AF37"/>
-                        </div>
+                        <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="help-circle" size={48} color="#D4AF37"/></div>
                         <h3 className="text-3xl font-black text-gray-800 mb-2">確認結帳？</h3>
                         <p className="text-gray-400 font-bold mb-10 italic">顧客：{searchQuery || "一般散客"} | 金額：${totalAmount}</p>
                         <div className="flex gap-4">
                             <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-5 font-black text-gray-400 uppercase">取消</button>
-                            <button onClick={executeCheckout} disabled={isProcessing} className="flex-[2] py-5 bg-[#1C1C1E] text-[#D4AF37] rounded-2xl text-xl font-black shadow-xl uppercase italic">
-                                {isProcessing ? '處理中...' : '是的，確定結帳'}
-                            </button>
+                            <button onClick={executeCheckout} disabled={isProcessing} className="flex-[2] py-5 bg-[#1C1C1E] text-[#D4AF37] rounded-2xl text-xl font-black shadow-xl uppercase italic">{isProcessing ? '處理中...' : '是的，確定結帳'}</button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ⚡️ 收據 Modal (QR 碼作用區) */}
+            {showReceipt && (
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-xl z-[9000] flex items-center justify-center p-6" onClick={()=>setShowReceipt(false)}>
+                    <div className="receipt-container w-full max-w-sm p-10 flex flex-col items-center animate-fade-in shadow-2xl" onClick={e=>e.stopPropagation()}>
+                        <h3 className="text-2xl font-black text-gray-800 italic mb-10">專屬空間沙龍</h3>
+                        <div className="p-4 bg-white rounded-[3rem] shadow-inner mb-10 border border-gray-50 flex items-center justify-center">
+                            <Icon name="qr-code" size={160} color="#1C1C1E" />
+                        </div>
+                        <button onClick={()=>setShowReceipt(false)} className="w-full py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-3xl font-black shadow-2xl text-xl italic uppercase">完成並退出</button>
                     </div>
                 </div>
             )}
@@ -564,7 +563,7 @@ const S3_ReportModule = ({ records, staffList }) => {
 };
        
  // ==========================================
-// --- S4: 顧客管理 (修復不存檔與顯示問題) ---
+// --- S4: 顧客管理 (中文化與二次刪除版) ---
 // ==========================================
 const S4_CustomerModule = ({ customers, setCustomers, staffList }) => {
     const [showModal, setShowModal] = useState(false);
@@ -574,52 +573,71 @@ const S4_CustomerModule = ({ customers, setCustomers, staffList }) => {
 
     const handleSave = () => {
         if (!form.name.trim()) return alert("請輸入姓名");
-        // ⚡️ 核心修正：同步回大腦資料庫，確保切換頁面不消失
         if (editingId) {
             setCustomers(prev => prev.map(c => c.id === editingId ? { ...c, ...form } : c));
         } else {
-            const newCust = { ...form, id: Date.now().toString(), history: [], visitCount: 0 };
+            const newCust = { ...form, id: Date.now().toString(), history: [], visitCount: 1 };
             setCustomers(prev => [...prev, newCust]);
         }
         setShowModal(false); setEditingId(null); setForm(initialForm);
     };
 
+    // ⚡️ 核心強化：刪除二次確認
+    const handleDelete = (id, name) => {
+        if (window.confirm(`【危險操作】確定要永久刪除顧客「${name}」的資料嗎？`)) {
+            setCustomers(prev => prev.filter(c => c.id !== id));
+        }
+    };
+
     return (
         <div className="h-full flex flex-col gap-8 animate-fade-in relative">
             <div className="flex justify-between items-end shrink-0">
-                <div><h1 className="text-6xl font-black text-gold-gradient tracking-tighter italic">s4 顧客</h1><p className="text-gray-400 font-bold ml-1 text-[10px] opacity-60">Cloud Sync Active</p></div>
+                <div>
+                    <h1 className="text-6xl font-black text-gold-gradient tracking-tighter italic">s4 顧客管理</h1>
+                    <p className="text-gray-400 font-bold ml-1 text-[10px] opacity-60 uppercase italic">Customer Database</p>
+                </div>
                 <button onClick={() => { setShowModal(true); setEditingId(null); setForm(initialForm); }} className="btn-glass-white px-10 py-4 shadow-xl text-lg font-black">+ 新增會員</button>
             </div>
+
             <div className="flex-1 liquid-glass p-10 overflow-y-auto bg-white/20">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                     {customers.map(c => (
                         <div key={c.id} className="liquid-glass p-10 bg-white/40 hover:bg-white transition-all shadow-sm group">
                             <span className="px-4 py-1.5 rounded-full text-[10px] font-black text-white mb-3 inline-block shadow-md uppercase" style={{ background: c.color || '#D4AF37' }}>{c.tag}</span>
-                            <div className="flex justify-between items-start"><h3 className="text-4xl font-black text-[#1C1C1E] italic">{c.name}</h3><button onClick={()=>{setEditingId(c.id); setForm(c); setShowModal(true);}} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-300 shadow-sm border-white group-hover:text-blue-500 transition-all"><Icon name="edit-3" size={18}/></button></div>
+                            <div className="flex justify-between items-start">
+                                <h3 className="text-4xl font-black text-[#1C1C1E] italic">{c.name}</h3>
+                                <div className="flex gap-2">
+                                    <button onClick={()=>{setEditingId(c.id); setForm(c); setShowModal(true);}} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-300 shadow-sm border-white group-hover:text-blue-500 transition-all"><Icon name="edit-3" size={18}/></button>
+                                    {/* ⚡️ 補回：二次確認刪除 */}
+                                    <button onClick={()=>handleDelete(c.id, c.name)} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-300 shadow-sm border-white group-hover:text-red-500 transition-all"><Icon name="trash-2" size={18}/></button>
+                                </div>
+                            </div>
                             <div className="mt-8 space-y-4 font-bold text-gray-500 italic">
-                                <div className="flex justify-between border-b border-white pb-2"><span>Phone</span><b className="text-gray-800">{c.phone || '未填寫'}</b></div>
-                                <div className="flex justify-between border-b border-white pb-2"><span>Birthday</span><b className="text-gray-400">{c.birthday || '未設定'}</b></div>
-                                <div className="flex justify-between pt-2"><span>Designer</span><b className="text-gray-800">{c.staff}</b></div>
-                                <div className="flex justify-between pt-2"><span>Total Spend</span><b className="text-gold-gradient text-2xl">${(c.totalSpend || 0).toLocaleString()}</b></div>
+                                <div className="flex justify-between border-b border-white pb-2"><span>聯絡電話</span><b className="text-gray-800">{c.phone || '未填寫'}</b></div>
+                                <div className="flex justify-between border-b border-white pb-2"><span>生日日期</span><b className="text-gray-400">{c.birthday || '未設定'}</b></div>
+                                <div className="flex justify-between pt-2"><span>指定設計師</span><b className="text-gray-800">{c.staff}</b></div>
+                                <div className="flex justify-between pt-2 border-t border-white/50 mt-4"><span>累積消費金額</span><b className="text-gold-gradient text-2xl">${(c.totalSpend || 0).toLocaleString()}</b></div>
                             </div>
                         </div>
                     ))}
                 </div>
             </div>
+
+            {/* 新增/編輯視窗 (中文化) */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[5000] flex items-center justify-center p-4">
                     <div className="liquid-glass w-full max-w-2xl p-12 bg-[#F2F2F7] border-white shadow-2xl animate-pop">
-                        <h3 className="text-3xl font-black mb-10 text-gold-gradient italic uppercase">Customer Profile</h3>
+                        <h3 className="text-3xl font-black mb-10 text-gold-gradient italic uppercase">編輯顧客資料</h3>
                         <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 ml-4 italic">NAME</label><input className="input-ios font-black" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} /></div>
-                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 ml-4 italic">PHONE</label><input className="input-ios font-black" value={form.phone} onChange={e=>setForm({...form, phone:e.target.value})} /></div>
+                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 ml-4 italic">顧客姓名</label><input className="input-ios font-black" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} /></div>
+                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 ml-4 italic">聯絡電話</label><input className="input-ios font-black" value={form.phone} onChange={e=>setForm({...form, phone:e.target.value})} /></div>
                             </div>
                             <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 ml-4 italic">BIRTHDAY</label><input type="date" className="input-ios font-black" value={form.birthday} onChange={e=>setForm({...form, birthday:e.target.value})} /></div>
-                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 ml-4 italic">DESIGNER</label><select className="input-ios font-black" value={form.staff} onChange={e=>setForm({...form, staff:e.target.value})}>{staffList.map(s=><option key={s}>{s}</option>)}</select></div>
+                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 ml-4 italic">生日日期</label><input type="date" className="input-ios font-black" value={form.birthday} onChange={e=>setForm({...form, birthday:e.target.value})} /></div>
+                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 ml-4 italic">負責設計師</label><select className="input-ios font-black" value={form.staff} onChange={e=>setForm({...form, staff:e.target.value})}>{staffList.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
                             </div>
-                            <button onClick={handleSave} className="w-full py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-[2rem] text-2xl font-black italic shadow-xl">SAVE TO DATABASE</button>
+                            <button onClick={handleSave} className="w-full py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-[2rem] text-2xl font-black italic shadow-xl">儲存變更</button>
                         </div>
                     </div>
                 </div>
