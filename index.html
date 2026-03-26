@@ -563,23 +563,23 @@ const S3_ReportModule = ({ records, staffList }) => {
 };
        
  // ==========================================
-// --- S4: 顧客管理 (100% 還原截圖：標籤列與樣式) ---
+// --- S4: 顧客管理 (標籤連動 + 搜尋修正版) ---
 // ==========================================
 const S4_CustomerModule = ({ customers = [], setCustomers, staffData = [] }) => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState(''); // 確保這裡叫 searchTerm
     const [filterStaff, setFilterStaff] = useState('所有人');
 
-    // ⚡️ 核心修正：強制定義設計師名單，確保標籤列不會消失
+    // ⚡️ 數據保險絲
     const finalStaff = staffData.length > 0 ? staffData : [
         { name: '小刀', color: '#D4AF37' },
         { name: 'Eason', color: '#5856D6' },
         { name: 'A-Lin', color: '#FF2D55' }
     ];
 
-    const initialForm = { name: '', phone: '', staff: '小刀', tag: 'VIP', birthday: '', note: '', color: '#D4AF37' };
+    const initialForm = { name: '', phone: '', staff: finalStaff[0].name, tag: 'VIP', birthday: '', note: '', color: finalStaff[0].color };
     const [form, setForm] = useState(initialForm);
 
     const handleSave = () => {
@@ -590,7 +590,7 @@ const S4_CustomerModule = ({ customers = [], setCustomers, staffData = [] }) => 
             const selectedS = finalStaff.find(s => s.name === form.staff);
             setCustomers(prev => [...prev, { 
                 ...form, id: Date.now().toString(), visitCount: 1, totalSpend: 0, 
-                history: [{ date: '2026/03/26', item: '建立檔案', price: 0 }],
+                history: [{ date: new Date().toLocaleDateString(), item: '建立檔案', price: 0 }],
                 color: selectedS ? selectedS.color : '#D4AF37'
             }]);
         }
@@ -598,14 +598,14 @@ const S4_CustomerModule = ({ customers = [], setCustomers, staffData = [] }) => 
     };
 
     const filteredCustomers = customers.filter(c => {
-        const matchesSearch = (c.name || "").includes(searchTerm) || (c.phone || "").includes(searchTerm);
-        const matchesStaff = filterStaff === '所有人' || c.staff === filterStaff;
-        return matchesSearch && matchesStaff;
+        const nameMatch = (c.name || "").includes(searchTerm);
+        const phoneMatch = (c.phone || "").includes(searchTerm);
+        const staffMatch = filterStaff === '所有人' || c.staff === filterStaff;
+        return (nameMatch || phoneMatch) && staffMatch;
     });
 
     return (
         <div className="flex h-screen w-screen p-6 md:p-10 flex-col gap-8 animate-fade-in relative">
-            {/* 1. 頂部導覽列：完美還原標籤列與搜尋框平行佈局 */}
             <div className="flex flex-col md:flex-row justify-between items-end gap-6 shrink-0">
                 <div>
                     <h1 className="text-6xl font-black text-gold-gradient tracking-tighter">顧客</h1>
@@ -613,7 +613,6 @@ const S4_CustomerModule = ({ customers = [], setCustomers, staffData = [] }) => 
                 </div>
                 
                 <div className="flex flex-wrap gap-4 w-full md:w-auto items-center">
-                    {/* ⚡️ 就在這裡！標籤列：選中黑底白字，沒選中透明底灰字 */}
                     <div className="flex bg-white/40 p-1.5 rounded-2xl border border-white/50 backdrop-blur-md shadow-sm">
                         <button 
                             onClick={() => setFilterStaff('所有人')}
@@ -633,6 +632,7 @@ const S4_CustomerModule = ({ customers = [], setCustomers, staffData = [] }) => 
                     </div>
 
                     <div className="relative">
+                        {/* ⚡️ 修正點：onChange 必須對應 setSearchTerm */}
                         <input className="input-ios md:w-64 pl-12 shadow-sm font-bold" placeholder="搜尋姓名或電話..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                         <div className="absolute left-4 top-3.5 opacity-30"><Icon name="search" size={20} /></div>
                     </div>
@@ -641,15 +641,14 @@ const S4_CustomerModule = ({ customers = [], setCustomers, staffData = [] }) => 
                 </div>
             </div>
 
-            {/* 2. 顧客卡片區域 */}
             <div className="flex-1 liquid-glass p-10 overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                     {filteredCustomers.map(c => (
-                        <div key={c.id} className="liquid-glass p-10 bg-white/40 hover:bg-white/95 transition-all relative group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-opacity-10 rounded-bl-[4rem]" style={{ backgroundColor: c.color }}></div>
+                        <div key={c.id} className="liquid-glass p-10 bg-white/40 hover:bg-white/95 transition-all relative group shadow-sm">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-opacity-10 rounded-bl-[4rem]" style={{ backgroundColor: c.color || '#D4AF37' }}></div>
                             <div className="flex justify-between items-start mb-8 relative z-10">
                                 <div>
-                                    <span className="px-4 py-1.5 rounded-full text-[10px] font-black text-white mb-3 inline-block shadow-md uppercase tracking-widest" style={{ backgroundColor: c.color }}>{c.tag}</span>
+                                    <span className="px-4 py-1.5 rounded-full text-[10px] font-black text-white mb-3 inline-block shadow-md uppercase tracking-widest" style={{ backgroundColor: c.color || '#D4AF37' }}>{c.tag}</span>
                                     <h3 className="text-4xl font-black text-[#1C1C1E] tracking-tight">{c.name}</h3>
                                 </div>
                                 <div className="flex space-x-3">
@@ -662,14 +661,14 @@ const S4_CustomerModule = ({ customers = [], setCustomers, staffData = [] }) => 
                                 <div className="flex justify-between items-center"><div className="flex items-center gap-2"><Icon name="phone" size={16} /><span>聯絡電話</span></div><b className="text-gray-900 text-lg">{c.phone}</b></div>
                                 <div className="flex justify-between items-center"><div className="flex items-center gap-2"><Icon name="user-check" size={16} /><span>指定設計師</span></div><b className="text-gray-900 text-lg">{c.staff}</b></div>
                                 <div className="flex justify-between items-center"><div className="flex items-center gap-2"><Icon name="calendar" size={16} /><span>生日</span></div><b className="text-gray-400 text-lg">{c.birthday || '未設定'}</b></div>
-                                <div className="flex justify-between items-center pt-2"><div className="flex items-center gap-2"><Icon name="coins" size={16} color="#D4AF37" /><span>累積消費</span></div><b className="text-yellow-600 text-lg">{c.visitCount} 次 / ${ (Number(c.totalSpend) || 0).toLocaleString() }</b></div>
+                                <div className="flex justify-between items-center pt-2"><div className="flex items-center gap-2"><Icon name="coins" size={16} color="#D4AF37" /><span>累積消費</span></div><b className="text-[#D4AF37] text-2xl font-black">${ (Number(c.totalSpend) || 0).toLocaleString() }</b></div>
                             </div>
 
                             <div className="mb-6">
                                 <div className="flex items-center gap-2 mb-3 opacity-40 uppercase tracking-tighter italic"><Icon name="activity" size={14} /><span className="text-[10px] font-black">Recent History</span></div>
                                 <div className="space-y-2">
                                     {(c.history || []).slice(0,3).map((h, i) => (
-                                        <div key={i} className="flex justify-between items-center px-5 py-3 bg-white/60 rounded-2xl border border-white text-[11px] font-black shadow-sm transition-colors group-hover:bg-white">
+                                        <div key={i} className="flex justify-between items-center px-5 py-3 bg-white/60 rounded-2xl border border-white text-[11px] font-black shadow-sm">
                                             <span className="text-gray-400">{h.date}</span><span className="text-gray-800">{h.item}</span><span className="text-[#D4AF37]">${h.price}</span>
                                         </div>
                                     ))}
@@ -682,7 +681,7 @@ const S4_CustomerModule = ({ customers = [], setCustomers, staffData = [] }) => 
                 </div>
             </div>
 
-            {/* 新增/修改彈窗 iOS 26 還原 */}
+            {/* 新增/修改彈窗保持不變 */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[2000] flex items-center justify-center p-4">
                     <div className="liquid-glass w-full max-w-2xl p-12 bg-[#F2F2F7] animate-fade-in max-h-[95vh] overflow-y-auto border-white shadow-2xl">
@@ -1533,21 +1532,28 @@ const S8_SystemModule = ({ services, setServices }) => {
     );
 };
  // ==========================================
-// --- 第三部分：核心主程式 (旗艦版 8 大功能全開) ---
+// --- 第三部分：核心主程式 (數據神經網全通版) ---
 // ==========================================
 const HairSalonApp = () => {
     const [activeTab, setActiveTab] = useState('s1');
     const [records, setRecords] = useState([]);
     
-    // ⚡️ 全域資料庫核心：確保所有資料集中在此，切換頁面不消失
+    // ⚡️ 全域資料庫核心：確保 history 結構正確，S4 才看得到消費軌跡
     const [customers, setCustomers] = useState([
-        { id: '1', name: '王大同', phone: '0912-345-678', staff: '小刀', tag: 'VIP', color: '#D4AF37', totalSpend: 15000, history: [] }
+        { 
+            id: '1', name: '王大同', phone: '0912-345-678', 
+            staff: '小刀', tag: 'VIP', color: '#D4AF37', 
+            totalSpend: 15000, 
+            history: [{ date: '2026/03/26', item: '精緻剪髮', price: 900 }] 
+        }
     ]);
+
     const [staffData, setStaffData] = useState([
         { id: '1', name: '小刀', role: '店長', baseSalary: 35000, commissionValue: 35, color: '#D4AF37' },
         { id: '2', name: 'Eason', role: '設計師', baseSalary: 28000, commissionValue: 30, color: '#5856D6' },
         { id: '3', name: 'A-Lin', role: '設計師', baseSalary: 28000, commissionValue: 30, color: '#FF2D55' }
     ]);
+
     const [serviceList, setServiceList] = useState([
         { id: 1, name: '精緻剪髮', price: 900, cat: '剪髮' },
         { id: 2, name: '洗髮服務', price: 300, cat: '洗髮' },
@@ -1559,15 +1565,29 @@ const HairSalonApp = () => {
     const onAddCustomer = (newCust) => {
         setCustomers(prev => {
             if (prev.find(c => c.name === newCust.name)) return prev;
-            return [...prev, { id: Date.now().toString(), phone: '', totalSpend: 0, history: [], color: '#D4AF37', ...newCust }];
+            // ⚡️ 自動配對設計師代表色
+            const selectedS = staffData.find(s => s.name === newCust.staff) || staffData[0];
+            return [...prev, { 
+                id: Date.now().toString(), 
+                phone: '', totalSpend: 0, 
+                history: [], 
+                color: selectedS.color, 
+                ...newCust 
+            }];
         });
-        const cloudUrl = localStorage.getItem('salon_cloud_url'); 
-        if (cloudUrl) fetch(cloudUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: 'Customers', data: newCust }) });
     };
 
     const onCheckout = async (record) => {
         setRecords([record, ...records]);
-        setCustomers(prev => prev.map(c => c.name === record.customer ? { ...c, totalSpend: (c.totalSpend || 0) + record.total } : c));
+        // ⚡️ 結帳時，同步更新顧客的累積金額與消費軌跡
+        setCustomers(prev => prev.map(c => 
+            c.name === record.customer ? { 
+                ...c, 
+                totalSpend: (Number(c.totalSpend) || 0) + Number(record.total),
+                history: [...(c.history || []), { date: record.date, item: record.services[0], price: record.total }]
+            } : c
+        ));
+        
         const cloudUrl = localStorage.getItem('salon_cloud_url'); 
         if (cloudUrl) fetch(cloudUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'OrderData', data: record }) });
     };
@@ -1596,11 +1616,14 @@ const HairSalonApp = () => {
             <main className="flex-1 p-6 overflow-hidden">
                 <div className="flex-1 h-full liquid-glass p-12 flex flex-col relative bg-white/40 overflow-hidden shadow-2xl">
                     <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#D4AF37]/10 blur-[120px] rounded-full pointer-events-none"></div>
-                    {/* ⚡️ 核心對接：確保所有模組都傳入 correct props */}
+                    
                     {activeTab === 's1' && <S1_OrderModule staffList={staffList} services={serviceList} onCheckout={onCheckout} setActiveTab={setActiveTab} onAddCustomer={onAddCustomer} customers={customers} />}
                     {activeTab === 's2' && <S2_RecordTrackerModule records={records} onUpdateRecords={setRecords} staffList={staffList} />}
                     {activeTab === 's3' && <S3_ReportModule records={records} staffList={staffList} />}
-                    {activeTab === 's4' && <S4_CustomerModule customers={customers} setCustomers={setCustomers} staffList={staffList} />}
+                    
+                    {/* ⚡️ 這裡改為傳入 staffData 而不是 staffList，S4 的標籤才會動 */}
+                    {activeTab === 's4' && <S4_CustomerModule customers={customers} setCustomers={setCustomers} staffData={staffData} />}
+                    
                     {activeTab === 's5' && <S5_InventoryModule />}
                     {activeTab === 's6' && <S6_StaffModule staffData={staffData} setStaffData={setStaffData} />}
                     {activeTab === 's7' && <S7_ExpenseModule />}
