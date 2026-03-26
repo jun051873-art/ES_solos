@@ -563,7 +563,7 @@ const S3_ReportModule = ({ records, staffList }) => {
 };
        
  // ==========================================
-// --- S4: 顧客管理 (防崩潰 + 中文化版) ---
+// --- S4: 顧客管理 (100% 還原截圖：標籤列與樣式) ---
 // ==========================================
 const S4_CustomerModule = ({ customers = [], setCustomers, staffData = [] }) => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -572,126 +572,148 @@ const S4_CustomerModule = ({ customers = [], setCustomers, staffData = [] }) => 
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStaff, setFilterStaff] = useState('所有人');
 
+    // ⚡️ 核心修正：強制定義設計師名單，確保標籤列不會消失
+    const finalStaff = staffData.length > 0 ? staffData : [
+        { name: '小刀', color: '#D4AF37' },
+        { name: 'Eason', color: '#5856D6' },
+        { name: 'A-Lin', color: '#FF2D55' }
+    ];
+
     const initialForm = { name: '', phone: '', staff: '小刀', tag: 'VIP', birthday: '', note: '', color: '#D4AF37' };
     const [form, setForm] = useState(initialForm);
-
-    // ⚡️ 數據保險絲：如果沒有 customers，顯示提示而不是空白
-    if (!customers) {
-        return <div className="h-full flex items-center justify-center text-gray-400 italic text-2xl font-black">數據讀取中...</div>;
-    }
 
     const handleSave = () => {
         if (!form.name.trim()) return alert("請輸入姓名");
         if (editingId) {
             setCustomers(prev => prev.map(c => c.id === editingId ? { ...c, ...form } : c));
         } else {
-            const selectedStaffObj = staffData.find(s => s.name === form.staff);
-            const newCust = { 
-                ...form, id: Date.now().toString(), visitCount: 0, totalSpend: 0, 
-                history: [{ date: '新顧客', item: '建立檔案', price: 0 }],
-                color: selectedStaffObj ? selectedStaffObj.color : '#D4AF37'
-            };
-            setCustomers(prev => [...prev, newCust]);
+            const selectedS = finalStaff.find(s => s.name === form.staff);
+            setCustomers(prev => [...prev, { 
+                ...form, id: Date.now().toString(), visitCount: 1, totalSpend: 0, 
+                history: [{ date: '2026/03/26', item: '建立檔案', price: 0 }],
+                color: selectedS ? selectedS.color : '#D4AF37'
+            }]);
         }
         setShowModal(false); setEditingId(null); setForm(initialForm);
     };
 
-    const handleDelete = (id, name) => {
-        if (window.confirm(`【確認刪除】確定要刪除顧客「${name}」嗎？`)) {
-            setCustomers(prev => prev.filter(c => c.id !== id));
-        }
-    };
-
     const filteredCustomers = customers.filter(c => {
-        const nameMatch = (c.name || "").includes(searchTerm);
-        const phoneMatch = (c.phone || "").includes(searchTerm);
-        const staffMatch = filterStaff === '所有人' || c.staff === filterStaff;
-        return (nameMatch || phoneMatch) && staffMatch;
+        const matchesSearch = (c.name || "").includes(searchTerm) || (c.phone || "").includes(searchTerm);
+        const matchesStaff = filterStaff === '所有人' || c.staff === filterStaff;
+        return matchesSearch && matchesStaff;
     });
 
     return (
-        <div className="h-full flex flex-col gap-8 animate-fade-in relative">
+        <div className="flex h-screen w-screen p-6 md:p-10 flex-col gap-8 animate-fade-in relative">
+            {/* 1. 頂部導覽列：完美還原標籤列與搜尋框平行佈局 */}
             <div className="flex flex-col md:flex-row justify-between items-end gap-6 shrink-0">
                 <div>
-                    <h1 className="text-6xl font-black text-gold-gradient tracking-tighter italic">s4 顧客管理</h1>
-                    <p className="text-gray-400 font-bold ml-1 text-xs opacity-60 uppercase italic">Customer Database</p>
+                    <h1 className="text-6xl font-black text-gold-gradient tracking-tighter">顧客</h1>
+                    <p className="text-gray-400 font-bold ml-1 tracking-widest uppercase text-xs opacity-60">Liquid History System</p>
                 </div>
-                <div className="flex flex-wrap gap-4 w-full md:w-auto items-center justify-end">
-                    <div className="flex bg-white/40 p-1.5 rounded-2xl border border-white shadow-sm">
-                        {[{ name: '所有人' }, ...staffData].map(s => (
-                            <button key={s.name} onClick={() => setFilterStaff(s.name)}
-                                className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${filterStaff === s.name ? 'bg-white shadow-md text-black' : 'text-gray-400'}`}>
+                
+                <div className="flex flex-wrap gap-4 w-full md:w-auto items-center">
+                    {/* ⚡️ 就在這裡！標籤列：選中黑底白字，沒選中透明底灰字 */}
+                    <div className="flex bg-white/40 p-1.5 rounded-2xl border border-white/50 backdrop-blur-md shadow-sm">
+                        <button 
+                            onClick={() => setFilterStaff('所有人')}
+                            className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${filterStaff === '所有人' ? 'bg-black text-white shadow-sm' : 'text-gray-400'}`}
+                        >
+                            所有人
+                        </button>
+                        {finalStaff.map(s => (
+                            <button 
+                                key={s.name} 
+                                onClick={() => setFilterStaff(s.name)}
+                                className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${filterStaff === s.name ? 'bg-black text-white shadow-sm' : 'text-gray-400'}`}
+                            >
                                 {s.name}
                             </button>
                         ))}
                     </div>
+
                     <div className="relative">
-                        <input className="input-ios md:w-64 pl-12 shadow-sm font-bold" placeholder="搜尋..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                        <input className="input-ios md:w-64 pl-12 shadow-sm font-bold" placeholder="搜尋姓名或電話..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                         <div className="absolute left-4 top-3.5 opacity-30"><Icon name="search" size={20} /></div>
                     </div>
-                    <button onClick={() => { setShowModal(true); setEditingId(null); setForm(initialForm); }} className="btn-glass-white px-10 py-4 shadow-xl active:scale-95 transition-all text-lg font-black">+ 新增會員</button>
+                    
+                    <button onClick={() => { setShowModal(true); setEditingId(null); setForm(initialForm); }} className="btn-glass-white px-10 py-4 shadow-xl active:scale-95 transition-all text-lg font-black">+ 新增</button>
                 </div>
             </div>
 
-            <div className="flex-1 liquid-glass p-10 overflow-y-auto bg-white/20">
+            {/* 2. 顧客卡片區域 */}
+            <div className="flex-1 liquid-glass p-10 overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                     {filteredCustomers.map(c => (
-                        <div key={c.id} className="liquid-glass p-10 bg-white/40 hover:bg-white transition-all shadow-sm group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-opacity-10 rounded-bl-[4rem] pointer-events-none" style={{ backgroundColor: c.color || '#D4AF37' }}></div>
+                        <div key={c.id} className="liquid-glass p-10 bg-white/40 hover:bg-white/95 transition-all relative group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-opacity-10 rounded-bl-[4rem]" style={{ backgroundColor: c.color }}></div>
                             <div className="flex justify-between items-start mb-8 relative z-10">
                                 <div>
-                                    <span className="px-4 py-1.5 rounded-full text-[10px] font-black text-white mb-3 inline-block shadow-md uppercase" style={{ backgroundColor: c.color || '#D4AF37' }}>{c.tag}</span>
-                                    <h3 className="text-4xl font-black text-[#1C1C1E] italic tracking-tight">{c.name}</h3>
+                                    <span className="px-4 py-1.5 rounded-full text-[10px] font-black text-white mb-3 inline-block shadow-md uppercase tracking-widest" style={{ backgroundColor: c.color }}>{c.tag}</span>
+                                    <h3 className="text-4xl font-black text-[#1C1C1E] tracking-tight">{c.name}</h3>
                                 </div>
                                 <div className="flex space-x-3">
-                                    <button onClick={() => { setEditingId(c.id); setForm(c); setShowModal(true); }} className="w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:text-blue-500 transition-all"><Icon name="edit-3" size={20}/></button>
-                                    <button onClick={() => handleDelete(c.id, c.name)} className="w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:text-red-500 transition-all"><Icon name="trash-2" size={20}/></button>
+                                    <button onClick={() => { setEditingId(c.id); setForm(c); setShowModal(true); }} className="w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:text-[#D4AF37] transition-all"><Icon name="edit-3" size={20} /></button>
+                                    <button onClick={() => {if(window.confirm(`確定刪除 ${c.name}？`)) setCustomers(prev=>prev.filter(i=>i.id!==c.id))}} className="w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:text-red-500 transition-all"><Icon name="trash-2" size={20} /></button>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-1 gap-y-4 text-sm font-bold text-gray-500 mb-8 border-b border-white pb-8">
-                                <div className="flex justify-between"><span>聯絡電話</span><b className="text-gray-900">{c.phone || '未填寫'}</b></div>
-                                <div className="flex justify-between"><span>負責設計師</span><b className="text-gray-900">{c.staff}</b></div>
-                                <div className="flex justify-between"><span>生日日期</span><b className="text-gray-400">{c.birthday || '未設定'}</b></div>
-                                <div className="flex justify-between pt-2"><span>累積金額</span><b className="text-yellow-600">${(c.totalSpend || 0).toLocaleString()}</b></div>
+                            
+                            <div className="grid grid-cols-1 gap-y-4 text-sm font-bold text-gray-500 mb-8 border-b border-white/50 pb-8">
+                                <div className="flex justify-between items-center"><div className="flex items-center gap-2"><Icon name="phone" size={16} /><span>聯絡電話</span></div><b className="text-gray-900 text-lg">{c.phone}</b></div>
+                                <div className="flex justify-between items-center"><div className="flex items-center gap-2"><Icon name="user-check" size={16} /><span>指定設計師</span></div><b className="text-gray-900 text-lg">{c.staff}</b></div>
+                                <div className="flex justify-between items-center"><div className="flex items-center gap-2"><Icon name="calendar" size={16} /><span>生日</span></div><b className="text-gray-400 text-lg">{c.birthday || '未設定'}</b></div>
+                                <div className="flex justify-between items-center pt-2"><div className="flex items-center gap-2"><Icon name="coins" size={16} color="#D4AF37" /><span>累積消費</span></div><b className="text-yellow-600 text-lg">{c.visitCount} 次 / ${ (Number(c.totalSpend) || 0).toLocaleString() }</b></div>
                             </div>
-                            <div className="space-y-2 mb-6">
-                                <p className="text-[10px] font-black text-gray-300 uppercase">Consumption History</p>
-                                {(c.history || []).slice(-3).reverse().map((h, i) => (
-                                    <div key={i} className="flex justify-between text-[11px] font-black bg-white/60 p-3 rounded-xl border border-white">
-                                        <span>{h.date}</span><span>{h.item}</span><span className="text-[#D4AF37]">${h.price}</span>
-                                    </div>
-                                ))}
+
+                            <div className="mb-6">
+                                <div className="flex items-center gap-2 mb-3 opacity-40 uppercase tracking-tighter italic"><Icon name="activity" size={14} /><span className="text-[10px] font-black">Recent History</span></div>
+                                <div className="space-y-2">
+                                    {(c.history || []).slice(0,3).map((h, i) => (
+                                        <div key={i} className="flex justify-between items-center px-5 py-3 bg-white/60 rounded-2xl border border-white text-[11px] font-black shadow-sm transition-colors group-hover:bg-white">
+                                            <span className="text-gray-400">{h.date}</span><span className="text-gray-800">{h.item}</span><span className="text-[#D4AF37]">${h.price}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                            <div className="p-5 bg-white/30 rounded-3xl border border-dashed border-white text-xs text-gray-500 italic">備註: {c.note || '無'}</div>
+
+                            <div className="p-6 bg-white/30 rounded-[2rem] border border-white border-dashed text-sm text-gray-500 italic"><div className="flex items-center gap-2 mb-2 opacity-40 uppercase text-[10px] font-black"><Icon name="file-text" size={12} /><span>Memo</span></div>{c.note || '尚無紀錄'}</div>
                         </div>
                     ))}
                 </div>
             </div>
 
+            {/* 新增/修改彈窗 iOS 26 還原 */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[5000] flex items-center justify-center p-4">
-                    <div className="liquid-glass w-full max-w-2xl p-12 bg-[#F2F2F7] animate-pop shadow-2xl">
-                        <h3 className="text-3xl font-black mb-10 text-gold-gradient italic uppercase">{editingId ? '編輯會員' : '新增會員'}</h3>
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 ml-4">姓名</label><input className="input-ios font-black" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} /></div>
-                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 ml-4">電話</label><input className="input-ios font-black" value={form.phone} onChange={e=>setForm({...form, phone:e.target.value})} /></div>
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[2000] flex items-center justify-center p-4">
+                    <div className="liquid-glass w-full max-w-2xl p-12 bg-[#F2F2F7] animate-fade-in max-h-[95vh] overflow-y-auto border-white shadow-2xl">
+                        <h3 className="text-3xl font-black mb-10 text-gold-gradient">{editingId ? '編輯資料' : '新增顧客'}</h3>
+                        <div className="space-y-8">
+                            <div className="grid grid-cols-2 gap-8">
+                                <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-5 uppercase tracking-widest">姓名</label><input className="input-ios font-bold shadow-sm" value={form.name} onChange={e=>setForm({...form, name:e.target.value})}/></div>
+                                <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-5 uppercase tracking-widest">電話</label><input className="input-ios font-bold shadow-sm" value={form.phone} onChange={e=>setForm({...form, phone:e.target.value})}/></div>
                             </div>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 ml-4">生日</label><input type="date" className="input-ios font-black" value={form.birthday} onChange={e=>setForm({...form, birthday:e.target.value})} /></div>
-                                <div className="space-y-1 relative">
-                                    <label className="text-[10px] font-black text-gray-400 ml-4">設計師</label>
-                                    <div onClick={()=>setIsDropdownOpen(!isDropdownOpen)} className="input-ios flex justify-between items-center cursor-pointer bg-white"><span>{form.staff}</span><Icon name="chevron-down" color="#D4AF37"/></div>
+                            <div className="grid grid-cols-2 gap-8 items-end">
+                                <div className="space-y-2 relative">
+                                    <label className="text-[10px] font-black text-gray-400 ml-5 uppercase tracking-widest">指定設計師</label>
+                                    <div onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="input-ios cursor-pointer flex justify-between items-center bg-white/90 shadow-sm border-white font-black">{form.staff}<Icon name="chevron-down" size={18} color="#D4AF37" /></div>
                                     {isDropdownOpen && (
-                                        <div className="crystal-menu border border-white">
-                                            {staffData.filter(s=>s.name!=='所有人').map(s => (
-                                                <div key={s.name} onClick={()=>{setForm({...form, staff:s.name, color:s.color}); setIsDropdownOpen(false);}} className="crystal-option">{s.name}</div>
+                                        <div className="crystal-menu border border-white/60 shadow-2xl">
+                                            {finalStaff.map(s => (
+                                                <div key={s.name} onClick={() => { setForm({...form, staff: s.name, color: s.color}); setIsDropdownOpen(false); }} className={`crystal-option ${form.staff === s.name ? 'selected' : ''}`}>
+                                                    <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{background: s.color}}></div>{s.name}</div>
+                                                </div>
                                             ))}
                                         </div>
                                     )}
                                 </div>
+                                <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-5 uppercase tracking-widest">標籤</label><input className="input-ios font-black shadow-sm" value={form.tag} onChange={e=>setForm({...form, tag:e.target.value})}/></div>
                             </div>
-                            <button onClick={handleSave} className="w-full py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-[2rem] text-2xl font-black italic shadow-xl">確認存檔</button>
+                            <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-5 uppercase tracking-widest">生日</label><input className="input-ios shadow-sm font-black" type="date" value={form.birthday} onChange={e=>setForm({...form, birthday:e.target.value})}/></div>
+                            <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-5 uppercase tracking-widest">技術備註</label><textarea className="input-ios h-32 font-bold shadow-sm" value={form.note} onChange={e=>setForm({...form, note:e.target.value})}></textarea></div>
+                            <div className="flex gap-6 pt-6">
+                                <button onClick={() => {setShowModal(false); setEditingId(null); setForm(initialForm);}} className="flex-1 py-5 font-black text-gray-400 hover:text-gray-600 transition-colors uppercase">取消</button>
+                                <button onClick={handleSave} className="flex-[2] py-5 btn-glass-white text-yellow-600 shadow-2xl active:scale-95 transition-all text-2xl font-black tracking-widest italic">存檔資料</button>
+                            </div>
                         </div>
                     </div>
                 </div>
