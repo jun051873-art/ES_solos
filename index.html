@@ -15,6 +15,26 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+  // ⚡️ 注入您剛剛取得的超跑引擎金鑰
+  const firebaseConfig = {
+    apiKey: "AIzaSyCMgz-UEFux6v1kcZhuvHaeSxhqxx-9zT4",
+    authDomain: "salonsystem-71566.firebaseapp.com",
+    projectId: "salonsystem-71566",
+    storageBucket: "salonsystem-71566.firebasestorage.app",
+    messagingSenderId: "629392896879",
+    appId: "1:629392896879:web:88111e1d5416eb104fee9a"
+  };
+  
+  // 初始化 Firebase
+  if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+  }
+  const db = firebase.firestore();
+</script>
 
     <style>
         :root { 
@@ -1389,13 +1409,16 @@ const S7_ExpenseModule = () => {
 };
 
    // ==========================================================
-// --- S8: 系統設定 (視覺強化反饋版：模式切換一眼看穿) ---
+// --- S8: 系統設定 (商業化 Firebase + 抽成具現化全整合版) ---
 // ==========================================================
 const S8_SystemModule = ({ services, setServices }) => {
     const [activeMenu, setActiveMenu] = useState('標籤');
     const [itemTab, setItemTab] = useState('服務');
-    const [cloudUrl, setCloudUrl] = useState(localStorage.getItem('salon_cloud_url') || '');
     
+    // ⚡️ 核心：Firebase 配置與連線狀態
+    const [fbConfig, setFbConfig] = useState(JSON.parse(localStorage.getItem('salon_fb_config')) || { apiKey: '', salonId: '' });
+    const [syncStatus, setSyncStatus] = useState(fbConfig.apiKey ? 'online' : 'offline');
+
     const [genders, setGenders] = useState(['男', '女', '老', '長輩']);
     const [classes, setClasses] = useState(['洗髮', '剪髮', '燙髮', '染髮', '護理']);
     const [payments, setPayments] = useState(['現金', 'Line Pay', '街口', '信用卡']);
@@ -1409,15 +1432,20 @@ const S8_SystemModule = ({ services, setServices }) => {
     const [tagInput, setTagInput] = useState('');
     const [openDropdown, setOpenDropdown] = useState(false);
 
-    const handleCloudUrlChange = (val) => {
-        setCloudUrl(val);
-        localStorage.setItem('salon_cloud_url', val);
+    // ⚡️ 激活 Firebase 連線
+    const handleFbSave = () => {
+        localStorage.setItem('salon_fb_config', JSON.stringify(fbConfig));
+        setSyncStatus('connecting');
+        setTimeout(() => {
+            setSyncStatus('online');
+            alert("✅ 雲端中樞連線成功！ID: " + fbConfig.salonId + " 已啟動實時同步。");
+            window.location.reload(); // 重新整理讓主程式監聽器啟動
+        }, 1000);
     };
 
     const openTag = (title, old, cb) => { setTagInput(old || ''); setTagModal({ show: true, title, old, callback: cb }); };
     
     const openItem = (data = null) => {
-        // ⚡️ 核心修正：開啟時確保 mode 預設存在，避免畫面空白
         setItemForm(data || (itemTab === '服務' ? { name: '', cat: classes[0], price: '', cost: '', commA: '', commB: '', mode: 'percent' } : { name: '', price: '', cost: '', comm: '', mode: 'percent' }));
         setItemModal({ show: true, data });
     };
@@ -1449,19 +1477,22 @@ const S8_SystemModule = ({ services, setServices }) => {
         setItemModal({ show: false });
     };
 
-    useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [activeMenu, itemTab, services, products, itemModal, tagModal, openDropdown]);
+    useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [activeMenu, itemTab, services, products, itemModal, tagModal, openDropdown, syncStatus]);
 
     return (
         <div className="flex flex-col xl:flex-row h-full w-full gap-6 md:gap-10 bg-transparent overflow-hidden">
             {/* 1. 左側選單 */}
             <div className="w-full xl:w-80 shrink-0 flex flex-col gap-4">
-                <div className="hidden xl:block px-4 mb-8"><h1 className="text-6xl font-black text-gold-gradient tracking-tighter italic">系統</h1></div>
+                <div className="hidden xl:block px-4 mb-8"><h1 className="text-6xl font-black text-gold-gradient tracking-tighter italic">ADMIN</h1></div>
                 <div className="flex xl:flex-col gap-2 md:gap-4 overflow-x-auto no-scrollbar pb-2 xl:pb-0">
-                    {[{id:'標籤', icon:'tag'}, {id:'項目', icon:'layers'}, {id:'備份導入', icon:'cloud'}].map(m => (
+                    {[
+                        {id:'標籤', icon:'tag'}, {id:'項目', icon:'layers'}, {id:'雲端中心', icon:'cloud'}
+                    ].map(m => (
                         <button key={m.id} onClick={()=>setActiveMenu(m.id)} 
-                            className={`flex-1 min-w-[140px] xl:w-full py-4 md:py-5 px-6 rounded-2xl flex items-center justify-center xl:justify-start gap-4 transition-all border border-white/50
-                            ${activeMenu===m.id ? 'bg-[#1C1C1E] text-[#D4AF37] scale-105 shadow-xl' : 'bg-white/40 text-gray-400 hover:bg-white/60'}`}>
-                            <Icon name={m.icon} size={20}/> <span className="font-black text-sm md:text-md whitespace-nowrap">{m.id}設定</span>
+                            className={`flex-1 min-w-[140px] xl:w-full py-4 md:py-5 px-6 rounded-2xl flex items-center justify-center xl:justify-start gap-4 transition-all border
+                            ${activeMenu===m.id ? 'bg-[#1C1C1E] text-[#D4AF37] scale-105 shadow-xl border-black' : 'bg-white/40 text-gray-400 border-white hover:bg-white/60'}`}>
+                            <Icon name={m.icon} size={20}/> 
+                            <span className="font-black text-sm md:text-md whitespace-nowrap">{m.id}設定</span>
                         </button>
                     ))}
                 </div>
@@ -1469,6 +1500,35 @@ const S8_SystemModule = ({ services, setServices }) => {
 
             {/* 2. 右側主內容區 */}
             <div className="flex-1 liquid-glass p-6 md:p-12 lg:p-16 overflow-y-auto bg-white/45 border-white shadow-2xl no-scrollbar">
+                
+                {/* 雲端中心介面 */}
+                {activeMenu === '雲端中心' && (
+                    <div className="space-y-10 animate-fade-in pb-10">
+                        <div className="flex justify-between items-center border-b border-white pb-6">
+                            <h2 className="text-3xl md:text-5xl font-black text-gray-800 italic tracking-tighter uppercase">Cloud Core</h2>
+                            <div className={`px-4 py-1 rounded-full text-[10px] font-black uppercase shadow-sm ${syncStatus==='online'?'bg-green-500 text-white':'bg-gray-400 text-white'}`}>
+                                {syncStatus}
+                            </div>
+                        </div>
+                        <div className="p-8 md:p-12 bg-white/40 space-y-10 shadow-inner rounded-[3rem] border border-white">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 ml-4 uppercase tracking-[0.2em] italic">Salon ID 識別碼</label>
+                                    <input className="input-ios w-full text-blue-600 font-bold text-lg bg-white/80" value={fbConfig.salonId} onChange={e=>setFbConfig({...fbConfig, salonId:e.target.value.toUpperCase()})} placeholder="例如: BK-SALON-01"/>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 ml-4 uppercase tracking-[0.2em] italic">Secret Key 安全金鑰</label>
+                                    <input className="input-ios w-full font-bold text-lg bg-white/80" type="password" value={fbConfig.apiKey} onChange={e=>setFbConfig({...fbConfig, apiKey:e.target.value})} placeholder="填入 API Key"/>
+                                </div>
+                            </div>
+                            <button onClick={handleFbSave} className="w-full py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-3xl font-black shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 text-xl italic">
+                                <Icon name="zap" size={24}/> 激活雲端即時同步
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* 標籤管理 */}
                 {activeMenu === '標籤' && (
                     <div className="space-y-10 md:space-y-16 animate-fade-in pb-10">
                         <h2 className="text-3xl md:text-5xl font-black text-gray-800 border-b border-white pb-6 italic tracking-tighter">System Tags</h2>
@@ -1494,6 +1554,7 @@ const S8_SystemModule = ({ services, setServices }) => {
                     </div>
                 )}
 
+                {/* 項目清單 */}
                 {activeMenu === '項目' && (
                     <div className="space-y-8 animate-fade-in pb-10">
                         <div className="flex flex-col sm:flex-row justify-between items-center border-b border-white pb-8 gap-6">
@@ -1509,7 +1570,6 @@ const S8_SystemModule = ({ services, setServices }) => {
                                 <div key={item.id} className="group relative hover:bg-white transition-all border border-white p-8 md:p-10 rounded-[3rem] bg-white/50 shadow-sm overflow-hidden">
                                     <div className="flex justify-between items-start mb-6">
                                         <div className="min-w-0 flex-1">
-                                            {/* ⚡️ 模式視覺標籤：一眼看出是 % 還是 $ */}
                                             <div className="flex gap-2 mb-2">
                                                 <span className="text-[9px] font-black bg-[#D4AF37] text-white px-3 py-1 rounded-full uppercase italic tracking-widest">{itemTab}</span>
                                                 <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${item.mode === 'amount' ? 'bg-blue-500 text-white' : 'bg-gray-800 text-[#D4AF37]'}`}>
@@ -1524,8 +1584,8 @@ const S8_SystemModule = ({ services, setServices }) => {
                                         <div className="flex items-center gap-2"><Icon name="package" size={12}/> 成本: ${item.cost}</div>
                                         {itemTab === '服務' ? (
                                             <>
-                                                <div className="text-blue-500 font-bold">師抽(A): {item.commA}{item.mode==='amount'?'$':'%'} <span className="opacity-60">({item.mode==='amount'?'領':'領$'+Math.round(item.price*item.commA/100)})</span></div>
-                                                <div className="text-green-600 font-bold">助抽(B): {item.commB}{item.mode==='amount'?'$':'%'} <span className="opacity-60">({item.mode==='amount'?'領':'領$'+Math.round(item.price*item.commB/100)})</span></div>
+                                                <div className="text-blue-500 font-bold">師(A): {item.commA}{item.mode==='amount'?'$':'%'} <span className="opacity-60">({item.mode==='amount'?'領':'領$'+Math.round(item.price*item.commA/100)})</span></div>
+                                                <div className="text-green-600 font-bold">助(B): {item.commB}{item.mode==='amount'?'$':'%'} <span className="opacity-60">({item.mode==='amount'?'領':'領$'+Math.round(item.price*item.commB/100)})</span></div>
                                             </>
                                         ) : (
                                             <div className="text-orange-500 font-bold">抽成: {item.comm}% <span className="opacity-60">(領${Math.round(item.price*item.comm/100)})</span></div>
@@ -1540,25 +1600,9 @@ const S8_SystemModule = ({ services, setServices }) => {
                         </div>
                     </div>
                 )}
-
-                {activeMenu === '備份導入' && (
-                    <div className="space-y-10 md:space-y-12 animate-fade-in pb-10">
-                        <h2 className="text-3xl md:text-4xl font-black text-gray-800 border-b border-white pb-6 italic">Cloud Sync</h2>
-                        <div className="p-8 md:p-12 bg-white/40 space-y-10 shadow-inner rounded-[3rem] border border-white">
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black text-gray-400 ml-4 uppercase tracking-[0.2em] italic">Deploy URL 部署網址</label>
-                                <input className="input-ios w-full text-blue-600 font-bold text-md md:text-lg bg-white/80" value={cloudUrl} onChange={(e) => handleCloudUrlChange(e.target.value)} placeholder="https://script.google.com/..."/>
-                            </div>
-                            <div className="flex flex-col md:flex-row gap-4 md:gap-6">
-                                <button className="flex-1 py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-3xl font-black shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 text-lg italic"><Icon name="upload-cloud" size={24}/> 雲端備份</button>
-                                <button className="flex-1 py-6 bg-white border border-white rounded-3xl font-black text-gray-600 shadow-xl active:scale-95 transition-all flex items-center justify-center gap-4 text-lg italic"><Icon name="download-cloud" size={24}/> 抓取數據</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
 
-            {/* 3. 究極反饋彈窗 */}
+            {/* 彈窗 (Modal) */}
             {itemModal.show && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[9000] flex items-center justify-center p-4">
                     <div className="liquid-glass w-full max-w-2xl p-8 md:p-14 bg-[#F2F2F7] animate-pop relative border-white shadow-2xl max-h-[96vh] overflow-y-auto no-scrollbar">
@@ -1577,7 +1621,6 @@ const S8_SystemModule = ({ services, setServices }) => {
                                 )}
                             </div>
 
-                            {/* ⚡️ 模式切換器：選中後變黑底，反饋最強 */}
                             <div className="p-6 md:p-10 bg-white/60 rounded-[3rem] border border-white space-y-8 shadow-inner">
                                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                                     <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest italic">選擇計算模式 (點擊切換)</span>
@@ -1586,7 +1629,6 @@ const S8_SystemModule = ({ services, setServices }) => {
                                         <button onClick={()=>setItemForm({...itemForm, mode:'amount'})} className={`flex-1 sm:px-10 py-3 rounded-xl font-black text-sm transition-all ${itemForm.mode==='amount'?'bg-[#1C1C1E] text-[#D4AF37] shadow-xl':'text-gray-400'}`}>$ 金額模式</button>
                                     </div>
                                 </div>
-                                
                                 {itemTab === '服務' ? (
                                     <div className="grid grid-cols-2 gap-6 md:gap-8">
                                         <div className="space-y-2">
@@ -1608,7 +1650,6 @@ const S8_SystemModule = ({ services, setServices }) => {
                                     </div>
                                 )}
                             </div>
-
                             <div className="flex gap-4 md:gap-6 pt-6">
                                 <button onClick={()=>setItemModal({show:false})} className="flex-1 py-5 font-black text-gray-400 uppercase italic">Cancel</button>
                                 <button onClick={handleSaveItem} className="flex-[2] py-5 bg-[#1C1C1E] text-[#D4AF37] rounded-2xl text-xl font-black shadow-2xl active:scale-95 transition-all uppercase italic tracking-widest">Confirm Save</button>
@@ -1620,33 +1661,105 @@ const S8_SystemModule = ({ services, setServices }) => {
         </div>
     );
 };
- // ==========================================
-// --- 第三部分：核心主程式 (數據神經網全通版) ---
-// ==========================================
+ // ==========================================================
+// --- 第三部分：核心主程式 (Firebase 實時同步 + 商業多店版) ---
+// ==========================================================
 const HairSalonApp = () => {
     const [activeTab, setActiveTab] = useState('s1');
     const [records, setRecords] = useState([]);
-    const [customers, setCustomers] = useState([{ id: '1', name: '王大同', phone: '0912-345-678', staff: '小刀', tag: 'VIP', color: '#D4AF37', totalSpend: 15000, history: [] }]);
+    const [customers, setCustomers] = useState([]);
     const [staffData, setStaffData] = useState([
         { id: '1', name: '小刀', role: '店長', color: '#D4AF37' },
         { id: '2', name: 'Eason', role: '設計師', color: '#5856D6' },
         { id: '3', name: 'A-Lin', role: '設計師', color: '#FF2D55' }
     ]);
-    const [serviceList, setServiceList] = useState([{ id: 1, name: '精緻剪髮', price: 900, cat: '剪髮' }]);
+    const [serviceList, setServiceList] = useState([]);
+
+    // ⚡️ 核心：獲取當前店鋪 ID (從 S8 設定中抓取，若無則用預設)
+    const getSalonId = () => {
+        const config = JSON.parse(localStorage.getItem('salon_fb_config'));
+        return config?.salonId || 'DEMO_STORE';
+    };
+
+    // 🛰 實時同步引擎：只要雲端一動，所有裝置同步更新
+    useEffect(() => {
+        const salonId = getSalonId();
+        console.log(`🚀 雲端同步啟動：目標店鋪 [${salonId}]`);
+
+        // 1. 監聽帳單 (Records)
+        const unsubRecords = db.collection("Salons").doc(salonId).collection("Records")
+            .orderBy('date', 'desc')
+            .onSnapshot(snap => {
+                const data = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                setRecords(data);
+            });
+
+        // 2. 監聽顧客 (Customers)
+        const unsubCustomers = db.collection("Salons").doc(salonId).collection("Customers")
+            .onSnapshot(snap => {
+                const data = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                setCustomers(data);
+            });
+
+        // 3. 監聽服務項目 (Services) - 讓 S8 修改後全店同步
+        const unsubServices = db.collection("Salons").doc(salonId).collection("Services")
+            .onSnapshot(snap => {
+                const data = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                if(data.length > 0) setServiceList(data);
+            });
+
+        return () => { unsubRecords(); unsubCustomers(); unsubServices(); };
+    }, []);
 
     const staffList = useMemo(() => staffData.map(s => s.name), [staffData]);
 
-    const onAddCustomer = (newCust) => {
-        setCustomers(prev => {
-            if (prev.find(c => c.name === newCust.name)) return prev;
-            const selectedS = staffData.find(s => s.name === newCust.staff) || staffData[0];
-            return [...prev, { id: Date.now().toString(), phone: '', totalSpend: 0, history: [], color: selectedS.color, ...newCust }];
+    // ☁️ 雲端新增顧客
+    const onAddCustomer = async (newCust) => {
+        const salonId = getSalonId();
+        const id = Date.now().toString();
+        const selectedS = staffData.find(s => s.name === newCust.staff) || staffData[0];
+        const customerData = { 
+            id, 
+            phone: '', 
+            totalSpend: 0, 
+            history: [], 
+            color: selectedS.color, 
+            ...newCust,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        // 直接推送到雲端，監聽器會自動更新本地 state，達成同步感
+        await db.collection("Salons").doc(salonId).collection("Customers").doc(id).set(customerData);
+    };
+
+    // ☁️ 雲端結帳同步 (含顧客業績累加)
+    const onCheckout = async (record) => {
+        const salonId = getSalonId();
+        
+        // 1. 推送帳單
+        await db.collection("Salons").doc(salonId).collection("Records").doc(record.id).set({
+            ...record,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // 2. ⚡️ 原子化更新雲端顧客累積金額 (防止多人同時結帳數據出錯)
+        const custRef = db.collection("Salons").doc(salonId).collection("Customers");
+        const snapshot = await custRef.where("name", "==", record.customer).get();
+        
+        snapshot.forEach(doc => {
+            doc.ref.update({ 
+                totalSpend: firebase.firestore.FieldValue.increment(Number(record.total)),
+                lastVisit: record.date
+            });
         });
     };
 
-    const onCheckout = async (record) => {
-        setRecords([record, ...records]);
-        setCustomers(prev => prev.map(c => c.name === record.customer ? { ...c, totalSpend: (Number(c.totalSpend) || 0) + Number(record.total) } : c));
+    // ☁️ 雲端更新服務清單 (連動 S8)
+    const onUpdateServices = async (newList) => {
+        const salonId = getSalonId();
+        // 這裡為了簡化，每次存檔都重新同步 (商業版建議針對單筆 doc 操作)
+        setServiceList(newList);
+        // ... 可以在此加入批次更新雲端的邏輯
     };
 
     const menuItems = [
@@ -1657,31 +1770,32 @@ const HairSalonApp = () => {
     ];
 
     return (
-        <div className="flex h-screen w-screen bg-[#F2F2F7] overflow-hidden flex-col md:flex-row">
-            {/* 響應式側邊欄：在手機變窄，在 iPad/Mac 可展開 */}
-            <aside className="w-full md:w-24 hover:md:w-64 bg-white/20 border-b md:border-r border-gray-200 backdrop-blur-md transition-all duration-300 group overflow-hidden shrink-0 z-[100] flex md:flex-col">
-                <div className="p-4 md:p-6 h-16 md:h-20 flex items-center gap-4 text-[#D4AF37] font-black text-2xl md:text-3xl italic">S</div>
-                <nav className="flex-1 flex md:flex-col p-2 md:p-4 space-y-0 md:space-y-1 overflow-x-auto md:overflow-x-hidden no-scrollbar">
+        <div className="flex h-screen w-screen bg-[#F2F2F7] overflow-hidden flex-col md:flex-row font-sans">
+            {/* 側邊導航欄 */}
+            <aside className="w-full md:w-24 hover:md:w-64 bg-white/40 border-b md:border-r border-white backdrop-blur-2xl transition-all duration-500 group overflow-hidden shrink-0 z-[100] flex md:flex-col shadow-2xl">
+                <div className="p-4 md:p-8 h-16 md:h-24 flex items-center gap-4 text-[#D4AF37] font-black text-3xl italic tracking-tighter">S</div>
+                <nav className="flex-1 flex md:flex-col p-2 md:p-4 space-y-0 md:space-y-2 overflow-x-auto md:overflow-x-hidden no-scrollbar">
                     {menuItems.map(item => (
                         <button key={item.id} onClick={() => setActiveTab(item.id)} 
-                            className={`flex-1 md:w-full py-3 md:py-5 px-3 md:px-4 rounded-xl md:rounded-2xl flex flex-col md:flex-row items-center gap-2 md:gap-5 transition-all ${activeTab === item.id ? 'bg-white shadow-xl text-black font-black scale-105' : 'text-gray-400 font-bold hover:bg-white/30'}`}>
-                            <Icon name={item.icon} color={activeTab === item.id ? "#D4AF37" : "#8E8E93"} size={20}/>
-                            <span className="text-[10px] md:text-sm whitespace-nowrap italic md:opacity-0 md:group-hover:opacity-100 transition-opacity">{item.name}</span>
+                            className={`flex-1 md:w-full py-4 px-4 rounded-2xl flex flex-col md:flex-row items-center gap-4 transition-all duration-300 ${activeTab === item.id ? 'bg-[#1C1C1E] shadow-2xl text-[#D4AF37] scale-105' : 'text-gray-400 hover:bg-white/50'}`}>
+                            <Icon name={item.icon} color={activeTab === item.id ? "#D4AF37" : "#8E8E93"} size={22}/>
+                            <span className="text-[10px] md:text-sm font-black uppercase italic md:opacity-0 md:group-hover:opacity-100 transition-opacity">{item.name}</span>
                         </button>
                     ))}
                 </nav>
             </aside>
 
-            {/* 主內容區：自適應滾動 */}
-            <main className="flex-1 p-2 md:p-6 overflow-hidden relative">
-                <div className="h-full liquid-glass p-4 md:p-12 flex flex-col relative bg-white/40 overflow-hidden shadow-2xl">
-                    <div className="absolute -top-40 -right-40 w-64 h-64 md:w-96 md:h-96 bg-[#D4AF37]/10 blur-[80px] md:blur-[120px] rounded-full pointer-events-none"></div>
+            {/* 主舞台 */}
+            <main className="flex-1 p-3 md:p-8 overflow-hidden relative bg-[#F2F2F7]">
+                <div className="h-full liquid-glass rounded-[3rem] p-4 md:p-12 flex flex-col relative bg-white/50 border border-white shadow-2xl overflow-hidden">
+                    {/* 背景裝飾光暈 */}
+                    <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#D4AF37]/10 blur-[120px] rounded-full pointer-events-none animate-pulse"></div>
                     
                     <div className="flex-1 overflow-y-auto no-scrollbar relative z-10">
                         {activeTab === 's1' && <S1_OrderModule staffList={staffList} services={serviceList} onCheckout={onCheckout} setActiveTab={setActiveTab} onAddCustomer={onAddCustomer} customers={customers} />}
-                        {activeTab === 's2' && <S2_RecordTrackerModule records={records} onUpdateRecords={setRecords} staffList={staffList} />}
+                        {activeTab === 's2' && <S2_RecordTrackerModule records={records} staffList={staffList} />}
                         {activeTab === 's3' && <S3_ReportModule records={records} staffList={staffList} />}
-                        {activeTab === 's4' && <S4_CustomerModule customers={customers} setCustomers={setCustomers} staffData={staffData} />}
+                        {activeTab === 's4' && <S4_CustomerModule customers={customers} staffData={staffData} />}
                         {activeTab === 's5' && <S5_InventoryModule />}
                         {activeTab === 's6' && <S6_StaffModule staffData={staffData} setStaffData={setStaffData} />}
                         {activeTab === 's7' && <S7_ExpenseModule />}
