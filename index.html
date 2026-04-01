@@ -121,28 +121,32 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
     const totalAmount = orderItems.reduce((s, i) => s + Number(i.finalPrice), 0);
     const change = cashIn ? Math.max(0, parseInt(cashIn) - totalAmount) : 0;
 
-   // ⚡️ 核心修正：加強版 QR 碼生成監聽 (解決白色一片的問題)
+   // ⚡️ 終極加固：連環計繪製引擎 (專治空白問題)
     useEffect(() => {
         let timer;
-        if (showReceipt && receiptData) {
-            // 💡 關鍵：等待 800ms，讓收據視窗的動畫穩定後再畫
-            timer = setTimeout(() => {
-                if (qrRef.current && window.QRCode) {
-                    qrRef.current.innerHTML = ""; // 清空舊內容
-                    const detailText = receiptData.items.map(item => `${item.name}: $${item.finalPrice}`).join('\n');
-                    try {
-                        new QRCode(qrRef.current, {
-                            text: `【專屬空間】\n${detailText}\n-----------\n總計: $${receiptData.total}`,
-                            width: 160,
-                            height: 160,
-                            colorDark: "#1C1C1E",
-                            colorLight: "#ffffff",
-                            correctLevel: QRCode.CorrectLevel.M
-                        });
-                        console.log("✅ QR Code 神奇生成成功！");
-                    } catch (e) { console.error("QR Code 繪製失敗:", e); }
-                }
-            }, 800);
+        const drawQR = () => {
+            if (showReceipt && receiptData && qrRef.current && window.QRCode) {
+                qrRef.current.innerHTML = ""; // 清空舊的
+                const detailText = receiptData.items.map(item => `${item.name}: $${item.finalPrice}`).join('\n');
+                try {
+                    new QRCode(qrRef.current, {
+                        text: `【專屬空間】\n${detailText}\n-----------\n總計: $${receiptData.total}`,
+                        width: 160,
+                        height: 160,
+                        colorDark: "#1C1C1E",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                    console.log("✅ QR Code 連環計繪製成功！");
+                } catch (e) { console.error("QR Code Error:", e); }
+            }
+        };
+
+        if (showReceipt) {
+            // 第一刷：500ms (快速嘗試)
+            setTimeout(drawQR, 500);
+            // 第二刷：1000ms (萬無一失)
+            timer = setTimeout(drawQR, 1000);
         }
         return () => clearTimeout(timer);
     }, [showReceipt, receiptData]);
