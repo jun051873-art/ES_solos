@@ -81,6 +81,52 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
 
+// ======================================================
+// ⚡️ 數位收據攔截引擎：掃描後顯示白紙黑字模式
+// ======================================================
+(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('receipt')) {
+        const itemsRaw = urlParams.get('items');
+        const total = urlParams.get('total');
+        // 解碼資料
+        const items = itemsRaw.split('|').map(str => str.split(':'));
+
+        // 渲染極簡白紙收據介面
+        document.write(`
+            <div style="background: white; min-height: 100vh; padding: 40px; font-family: -apple-system, sans-serif; color: black; display: flex; justify-content: center;">
+                <div style="width: 100%; max-width: 350px;">
+                    <div style="text-align: center; margin-bottom: 40px;">
+                        <h1 style="font-size: 28px; font-weight: 900; letter-spacing: 4px; margin-bottom: 5px;">EXCLUSIVE SPACE</h1>
+                        <p style="font-size: 10px; color: #888; letter-spacing: 2px;">DIGITAL RECEIPT</p>
+                    </div>
+                    
+                    <div style="border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; padding: 25px 0; margin-bottom: 25px;">
+                        ${items.map(item => `
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 16px; font-weight: 600;">
+                                <span>${item[0]}</span>
+                                <span>$${item[1]}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; font-weight: 900; font-size: 24px; margin-bottom: 50px;">
+                        <span>TOTAL</span>
+                        <span>$${total}</span>
+                    </div>
+
+                    <div style="text-align: center; border-top: 1px dashed #eee; pt-20">
+                        <p style="margin-top: 30px; font-size: 12px; font-weight: bold; color: #333;">感謝您的光臨</p>
+                        <p style="font-size: 9px; color: #aaa; margin-top: 10px;">${new Date().toLocaleString()}</p>
+                        <button onclick="window.location.href=window.location.pathname" style="margin-top: 40px; padding: 10px 20px; background: #f5f5f7; border: none; border-radius: 10px; font-size: 11px; color: #888; cursor: pointer;">返回系統</button>
+                    </div>
+                </div>
+            </div>
+        `);
+        window.stop(); // 停止後續 React 加載
+    }
+})();
+
         const Icon = ({ name, size = 18, color = "currentColor", className = "" }) => {
             useEffect(() => { if(window.lucide) lucide.createIcons(); }, [name]);
             return <i data-lucide={name} className={className} style={{ width: size, height: size, stroke: color, strokeWidth: '2.5px' }}></i>;
@@ -121,18 +167,35 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
     const totalAmount = orderItems.reduce((s, i) => s + Number(i.finalPrice), 0);
     const change = cashIn ? Math.max(0, parseInt(cashIn) - totalAmount) : 0;
 
-   // ⚡️ 終極方案：Google 雲端渲染引擎 (保證成功，不需套件)
+   // ⚡️ 終極加固：QR 碼繪製引擎 (支援掃描與點擊開跳轉)
     useEffect(() => {
+        let timer;
         if (showReceipt && receiptData && qrRef.current) {
-            const detailText = receiptData.items.map(item => `${item.name}:$${item.finalPrice}`).join(' | ');
-            const qrContent = encodeURIComponent(`【專屬空間】\n${detailText}\n總計: $${receiptData.total}`);
-            
-            // 直接生成一個 <img> 標籤插入
-            qrRef.current.innerHTML = `<img src="https://chart.googleapis.com/chart?cht=qr&chs=160x160&chl=${qrContent}" style="width:160px; height:160px;" />`;
-            console.log("✅ Google QR 引擎注入成功");
-        }
-    }, [showReceipt, receiptData]);
+            timer = setTimeout(() => {
+                const container = qrRef.current;
+                container.innerHTML = ""; // 清空舊內容
 
+                // 1. 準備明細資料，封裝成網址參數
+                const baseUrl = window.location.href.split('?')[0];
+                const itemsData = receiptData.items.map(i => `${i.name}:${i.finalPrice}`).join('|');
+                const qrUrl = `${baseUrl}?receipt=1&items=${encodeURIComponent(itemsData)}&total=${receiptData.total}`;
+
+                // 2. 使用 QRCode 套件繪製 (掃這個網址就不會跳 Google 搜尋了)
+                if (window.QRCode) {
+                    new QRCode(container, {
+                        text: qrUrl,
+                        width: 180,
+                        height: 180,
+                        colorDark: "#1C1C1E",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                    console.log("✅ 數位收據 QR 碼已生成");
+                }
+            }, 800);
+        }
+        return () => clearTimeout(timer);
+    }, [showReceipt, receiptData]);
     const executeCheckout = async () => {
         if (isProcessing || orderItems.length === 0) return;
         setIsProcessing(true);
@@ -337,11 +400,20 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
                             </span>
                         </div>
 
-                        {/* ⚡️ 雲端 QR 碼接收區 */}
+                        {/* ⚡️ QR 碼顯示區塊 */}
 <div className="p-4 bg-white rounded-[2.5rem] shadow-inner mb-10 border border-gray-50 flex items-center justify-center overflow-hidden min-h-[160px]">
-    <div ref={qrRef} className="flex items-center justify-center">
-        {/* 這裡會自動填入 Google 生成的圖片 */}
-    </div>
+   <div 
+    ref={qrRef} 
+    onClick={() => {
+        // 電腦版點擊直接跳轉到「白紙收據」
+        const baseUrl = window.location.href.split('?')[0];
+        const itemsData = receiptData.items.map(i => `${i.name}:${i.finalPrice}`).join('|');
+        const qrUrl = `${baseUrl}?receipt=1&items=${encodeURIComponent(itemsData)}&total=${receiptData.total}`;
+        window.open(qrUrl, '_blank');
+    }}
+    style={{ cursor: 'pointer', minHeight: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    title="點擊在新分頁開啟收據"
+></div>
 </div>
                         <button onClick={handleCloseReceipt} className="w-full py-5 bg-[#1C1C1E] text-[#D4AF37] rounded-3xl font-black shadow-2xl text-lg italic uppercase">Next Customer</button>
                     </div>
