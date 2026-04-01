@@ -99,21 +99,20 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
     const [payMethod, setPayMethod] = useState('現金');
     const [cashIn, setCashIn] = useState('');
     const [selectedStaff, setSelectedStaff] = useState(staffList[0] || '小刀');
-    const [isStaffOpen, setIsStaffOpen] = useState(false);
-    
-    // ⚡️ 核心狀態
+    // ⚡️ 補回：收據與處理狀態定義 (這是剛才漏掉的)
     const [showReceipt, setShowReceipt] = useState(false);
-    const [receiptData, setReceiptData] = useState(null); // 用來暫存結帳完的數據，防止清空
+    const [receiptData, setReceiptData] = useState(null); 
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
-
-    const qrRef = useRef(null);
-
+    const qrRef = useRef(null); // QR 碼的畫筆
+    const [isStaffOpen, setIsStaffOpen] = useState(false);
+    // ⚡️ 補回：計算抽成的邏輯
     const calculateCommission = (item) => {
         const price = Number(item.finalPrice) || 0;
         const commA = Number(item.commA) || 0;
         return item.mode === 'percent' ? Math.round(price * commA / 100) : commA;
     };
+    
 
     const addItem = (s) => setOrderItems(prev => [...prev, { 
         ...s, orderId: Date.now() + Math.random(), finalPrice: s.price, originalPrice: s.price, assistant: '無' 
@@ -122,18 +121,30 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
     const totalAmount = orderItems.reduce((s, i) => s + Number(i.finalPrice), 0);
     const change = cashIn ? Math.max(0, parseInt(cashIn) - totalAmount) : 0;
 
-    // ⚡️ 核心修復：生成 QR 碼
+   // ⚡️ 核心修正：加強版 QR 碼生成監聽 (解決白色一片的問題)
     useEffect(() => {
-        if (showReceipt && qrRef.current && window.QRCode && receiptData) {
-            qrRef.current.innerHTML = "";
-            const detailText = receiptData.items.map(item => `${item.name}: $${item.finalPrice}`).join('\n');
-            try {
-                new QRCode(qrRef.current, {
-                    text: `【專屬空間】\n${detailText}\n-----------\n總計: $${receiptData.total}`,
-                    width: 160, height: 160, colorDark: "#1C1C1E", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M
-                });
-            } catch (e) { console.error("QR Code Error:", e); }
+        let timer;
+        if (showReceipt && receiptData) {
+            // 💡 關鍵：等待 800ms，讓收據視窗的動畫穩定後再畫
+            timer = setTimeout(() => {
+                if (qrRef.current && window.QRCode) {
+                    qrRef.current.innerHTML = ""; // 清空舊內容
+                    const detailText = receiptData.items.map(item => `${item.name}: $${item.finalPrice}`).join('\n');
+                    try {
+                        new QRCode(qrRef.current, {
+                            text: `【專屬空間】\n${detailText}\n-----------\n總計: $${receiptData.total}`,
+                            width: 160,
+                            height: 160,
+                            colorDark: "#1C1C1E",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
+                        console.log("✅ QR Code 神奇生成成功！");
+                    } catch (e) { console.error("QR Code 繪製失敗:", e); }
+                }
+            }, 800);
         }
+        return () => clearTimeout(timer);
     }, [showReceipt, receiptData]);
 
     const executeCheckout = async () => {
@@ -1480,9 +1491,8 @@ const S7_ExpenseModule = () => {
         </div>
     );
 };
-
-   // ==========================================================
-// --- S8: 系統設定 (旗艦授權版：金鑰驗證 + 標籤項目全同步) ---
+// ==========================================================
+// --- S8: 系統設定 (旗艦授權版：金鑰驗證 + 網址自動綁定 + 項目全同步) ---
 // ==========================================================
 const S8_SystemModule = ({ services, setServices }) => {
     const [activeMenu, setActiveMenu] = useState('標籤');
@@ -1497,7 +1507,7 @@ const S8_SystemModule = ({ services, setServices }) => {
     const [genders, setGenders] = useState(['男生', '女生', '小孩', '長輩']);
     const [classes, setClasses] = useState(['洗髮', '剪髮', '燙髮', '染髮', '護理', '販賣']);
     const [payments, setPayments] = useState(['現金', 'LinePay', '街口', '信用卡']);
-    const [products, setProducts] = useState([]); // 產品販賣清單
+    const [products, setProducts] = useState([]); 
 
     const [tagModal, setTagModal] = useState({ show: false, title: '', old: '', callback: null });
     const [itemModal, setItemModal] = useState({ show: false, data: null });
@@ -1505,7 +1515,7 @@ const S8_SystemModule = ({ services, setServices }) => {
     const [tagInput, setTagInput] = useState('');
     const [openDropdown, setOpenDropdown] = useState(false);
 
-    // 🛰 實時同步標籤：從雲端 Settings/Tags 抓取最新自訂標籤
+    // 🛰 實時同步標籤：從雲端抓取該店專屬標籤
     useEffect(() => {
         const salonId = fbConfig.salonId || 'DEMO_STORE';
         const unsub = db.collection("Salons").doc(salonId).collection("Settings").doc("Tags")
@@ -1520,7 +1530,7 @@ const S8_SystemModule = ({ services, setServices }) => {
         return () => unsub();
     }, [fbConfig.salonId]);
 
-    // ☁️ 核心函數：同步標籤到雲端
+    // ☁️ 同步標籤到雲端
     const syncTagsToCloud = async (type, newList) => {
         const salonId = fbConfig.salonId || 'DEMO_STORE';
         try {
@@ -1532,36 +1542,57 @@ const S8_SystemModule = ({ services, setServices }) => {
         } catch (e) { console.error("標籤同步失敗", e); }
     };
 
-    // ⚡️ 激活系統授權 (與您剛建的 AuthorizedKeys 對接)
+    // ⚡️ 核心功能：激活系統並綁定專屬網址
     const handleActivateSystem = async () => {
         if (!fbConfig.salonId || !fbConfig.licenseKey) return alert("請輸入店號與金鑰！");
         setIsActivating(true);
         try {
+            // 1. 去雲端票倉找這把鑰匙
             const keyRef = db.collection("AuthorizedKeys").doc(fbConfig.licenseKey);
             const doc = await keyRef.get();
+            
             if (!doc.exists) {
-                alert("❌ 金鑰無效！");
+                alert("❌ 授權金鑰不存在！請聯繫管理員購買。");
                 setIsActivating(false);
                 return;
             }
+
             const keyData = doc.data();
+            // 2. 防盜檢查
             if (keyData.status === "used" && keyData.salonId !== fbConfig.salonId) {
-                alert("❌ 金鑰已被他店綁定！");
+                alert("❌ 此金鑰已被其他店號綁定！");
                 setIsActivating(false);
                 return;
             }
-            // 綁定成功
-            await keyRef.set({ status: "used", salonId: fbConfig.salonId, activatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+
+            // 3. 通過驗證：更新雲端狀態並初始化店鋪
+            await keyRef.set({ 
+                status: "used", 
+                salonId: fbConfig.salonId, 
+                activatedAt: firebase.firestore.FieldValue.serverTimestamp() 
+            }, { merge: true });
+
             await db.collection("Salons").doc(fbConfig.salonId).set({ initialized: true }, { merge: true });
             
+            // 4. 儲存設定到本地
             const finalConfig = { ...fbConfig, apiKey: "AIzaSyCMgz-UEFux6v1kcZhuvHaeSxhqxx-9zT4" };
             localStorage.setItem('salon_fb_config', JSON.stringify(finalConfig));
-            alert("🎉 授權成功！系統啟動。");
+            
+            // 💡 神奇功能：自動幫網址加上 ?id=店號 (方便以後免登入)
+            const newUrl = `${window.location.origin}${window.location.pathname}?id=${fbConfig.salonId}`;
+            window.history.replaceState(null, '', newUrl);
+
+            alert(`🎉 授權成功！\n您的專屬網址已生成，建議「加入主螢幕」使用。`);
             window.location.reload();
-        } catch (e) { alert("連線失敗"); } finally { setIsActivating(false); }
+        } catch (e) { 
+            console.error(e);
+            alert("連線驗證失敗，請檢查網路。"); 
+        } finally { 
+            setIsActivating(false); 
+        }
     };
 
-    // 🛠 修復：標籤編輯功能
+    // 🛠 標籤/項目編輯功能
     const openTag = (title, old, type, currentList, setter) => { 
         setTagInput(old || ''); 
         setTagModal({ 
@@ -1576,7 +1607,6 @@ const S8_SystemModule = ({ services, setServices }) => {
         }); 
     };
 
-    // 🛠 補齊：刪除服務/產品項目
     const handleDeleteItem = async (id, name) => {
         if (window.confirm(`確定刪除「${name}」？`)) {
             const salonId = fbConfig.salonId || 'DEMO_STORE';
@@ -1612,8 +1642,6 @@ const S8_SystemModule = ({ services, setServices }) => {
         setItemModal({ show: false });
     };
 
-    useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [activeMenu, itemTab, services, products, itemModal, tagModal, openDropdown, syncStatus]);
-
     return (
         <div className="flex flex-col xl:flex-row h-full w-full gap-6 md:gap-10 bg-transparent overflow-hidden">
             {/* 左側選單 */}
@@ -1643,16 +1671,17 @@ const S8_SystemModule = ({ services, setServices }) => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-400 ml-4 uppercase tracking-[0.2em] italic">Salon ID (店號)</label>
-                                    <input className="input-ios w-full text-blue-600 font-bold text-lg bg-white/80" value={fbConfig.salonId} onChange={e=>setFbConfig({...fbConfig, salonId:e.target.value.toUpperCase().replace(/\s+/g, '')})} />
+                                    <input className="input-ios w-full text-blue-600 font-bold text-lg bg-white/80" value={fbConfig.salonId} onChange={e=>setFbConfig({...fbConfig, salonId:e.target.value.toUpperCase().replace(/\s+/g, '')})} placeholder="例如: KNIFE01" />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-red-400 ml-4 uppercase tracking-[0.2em] italic">License Key (授權金鑰)</label>
-                                    <input className="input-ios w-full font-bold text-lg bg-white/80" type="password" value={fbConfig.licenseKey} onChange={e=>setFbConfig({...fbConfig, licenseKey:e.target.value})} />
+                                    <input className="input-ios w-full font-bold text-lg bg-white/80" type="password" value={fbConfig.licenseKey} onChange={e=>setFbConfig({...fbConfig, licenseKey:e.target.value})} placeholder="請輸入序列號" />
                                 </div>
                             </div>
                             <button onClick={handleActivateSystem} disabled={isActivating} className="w-full py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-3xl font-black shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 text-xl italic">
-                                <Icon name={isActivating ? "loader" : "zap"} className={isActivating ? "animate-spin" : ""} size={24}/> {isActivating ? "驗證中..." : "激活雲端中樞"}
+                                <Icon name={isActivating ? "loader" : "zap"} className={isActivating ? "animate-spin" : ""} size={24}/> {isActivating ? "驗證中..." : "激活雲端系統"}
                             </button>
+                            <p className="text-center text-[10px] text-gray-400 italic">* 激活成功後，系統將自動綁定此裝置與店號。</p>
                         </div>
                     </div>
                 )}
@@ -1762,7 +1791,6 @@ const S8_SystemModule = ({ services, setServices }) => {
                                     <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 ml-4 uppercase">成本 $</label><input className="input-ios text-center font-black bg-white shadow-inner" type="number" value={itemForm.cost} onChange={e=>setItemForm({...itemForm, cost:e.target.value})}/></div>
                                 )}
                             </div>
-                            {/* 抽成計價模式 */}
                             <div className="p-6 md:p-10 bg-white/60 rounded-[3rem] border border-white space-y-8 shadow-inner">
                                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                                     <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest italic">計價模式</span>
@@ -1800,7 +1828,7 @@ const S8_SystemModule = ({ services, setServices }) => {
         </div>
     );
 };
- // ==========================================================
+   // ==========================================================
 // --- 第三部分：核心主程式 (旗艦版：全自動雲端路徑隔離引擎) ---
 // ==========================================================
 const HairSalonApp = () => {
