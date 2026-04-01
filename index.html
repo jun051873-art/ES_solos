@@ -154,10 +154,20 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
     const [isStaffOpen, setIsStaffOpen] = useState(false);
     // ⚡️ 補回：計算抽成的邏輯
     const calculateCommission = (item) => {
-        const price = Number(item.finalPrice) || 0;
-        const commA = Number(item.commA) || 0;
+    const price = Number(item.finalPrice) || 0;
+    const cost = Number(item.cost) || 0;
+    const commA = Number(item.commA) || 0; // 服務的師(A)
+    const commValue = Number(item.comm) || 0; // 產品的抽成比
+
+    // 如果是服務項目 (由類別判斷，或看有沒有 commA)
+    if (item.cat !== '販賣') {
         return item.mode === 'percent' ? Math.round(price * commA / 100) : commA;
-    };
+    } 
+    
+    // ⚡️ 產品販賣邏輯：(售價 - 成本) * 抽成比例
+    const profit = price - cost;
+    return profit > 0 ? Math.round(profit * commValue / 100) : 0;
+};
     
 
     const addItem = (s) => setOrderItems(prev => [...prev, { 
@@ -1873,11 +1883,16 @@ const S8_SystemModule = ({ services, setServices }) => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col items-center py-4 text-center">
-                                        <label className="text-[10px] font-black text-orange-500 mb-3 uppercase italic">銷售抽成 %</label>
-                                        <input className="input-ios w-full sm:w-48 text-center text-5xl font-black text-orange-600 bg-white shadow-inner" type="number" value={itemForm.comm} onChange={e=>setItemForm({...itemForm, comm:e.target.value})}/>
-                                        <p className="mt-4 text-xs font-black text-gray-400">獎金: <span className="text-orange-600">${Math.round((Number(itemForm.price)*Number(itemForm.comm))/100)}</span></p>
-                                    </div>
+                                    // ✨ 這是新的：自動計算 (售價-成本)*比例
+<div className="flex flex-col items-center py-4 text-center">
+    <label className="text-[10px] font-black text-orange-500 mb-3 uppercase italic">銷售抽成 % (扣除成本後)</label>
+    <input className="input-ios w-full sm:w-48 text-center text-5xl font-black text-orange-600 bg-white shadow-inner" 
+           type="number" value={itemForm.comm} onChange={e=>setItemForm({...itemForm, comm:e.target.value})}/>
+    <p className="mt-4 text-[11px] font-black text-gray-400 leading-relaxed">
+        項目毛利: <span className="text-gray-600">${Number(itemForm.price) - Number(itemForm.cost)}</span><br/>
+        預計獎金: <span className="text-orange-600">${Math.round((Number(itemForm.price) - Number(itemForm.cost)) * Number(itemForm.comm) / 100)}</span>
+    </p>
+</div>
                                 )}
                             </div>
                             <div className="flex gap-4 pt-6"><button onClick={()=>setItemModal({show:false})} className="flex-1 py-5 font-black text-gray-400 uppercase italic">Cancel</button><button onClick={handleSaveItem} className="flex-[2] py-5 bg-[#1C1C1E] text-[#D4AF37] rounded-3xl text-2xl font-black shadow-2xl active:scale-95 transition-all uppercase italic">Confirm Save</button></div>
