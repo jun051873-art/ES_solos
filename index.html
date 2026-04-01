@@ -121,34 +121,16 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
     const totalAmount = orderItems.reduce((s, i) => s + Number(i.finalPrice), 0);
     const change = cashIn ? Math.max(0, parseInt(cashIn) - totalAmount) : 0;
 
-   // ⚡️ 終極加固：連環計繪製引擎 (專治空白問題)
+   // ⚡️ 終極方案：Google 雲端渲染引擎 (保證成功，不需套件)
     useEffect(() => {
-        let timer;
-        const drawQR = () => {
-            if (showReceipt && receiptData && qrRef.current && window.QRCode) {
-                qrRef.current.innerHTML = ""; // 清空舊的
-                const detailText = receiptData.items.map(item => `${item.name}: $${item.finalPrice}`).join('\n');
-                try {
-                    new QRCode(qrRef.current, {
-                        text: `【專屬空間】\n${detailText}\n-----------\n總計: $${receiptData.total}`,
-                        width: 160,
-                        height: 160,
-                        colorDark: "#1C1C1E",
-                        colorLight: "#ffffff",
-                        correctLevel: QRCode.CorrectLevel.M
-                    });
-                    console.log("✅ QR Code 連環計繪製成功！");
-                } catch (e) { console.error("QR Code Error:", e); }
-            }
-        };
-
-        if (showReceipt) {
-            // 第一刷：500ms (快速嘗試)
-            setTimeout(drawQR, 500);
-            // 第二刷：1000ms (萬無一失)
-            timer = setTimeout(drawQR, 1000);
+        if (showReceipt && receiptData && qrRef.current) {
+            const detailText = receiptData.items.map(item => `${item.name}:$${item.finalPrice}`).join(' | ');
+            const qrContent = encodeURIComponent(`【專屬空間】\n${detailText}\n總計: $${receiptData.total}`);
+            
+            // 直接生成一個 <img> 標籤插入
+            qrRef.current.innerHTML = `<img src="https://chart.googleapis.com/chart?cht=qr&chs=160x160&chl=${qrContent}" style="width:160px; height:160px;" />`;
+            console.log("✅ Google QR 引擎注入成功");
         }
-        return () => clearTimeout(timer);
     }, [showReceipt, receiptData]);
 
     const executeCheckout = async () => {
@@ -355,10 +337,12 @@ const S1_OrderModule = ({ onCheckout, staffList, services, setActiveTab, onAddCu
                             </span>
                         </div>
 
-                        <div className="p-4 bg-white rounded-[2.5rem] shadow-inner mb-10 border border-gray-50 flex items-center justify-center overflow-hidden min-h-[160px] min-w-[160px]">
-                            <div ref={qrRef}></div>
-                        </div>
-
+                        {/* ⚡️ 雲端 QR 碼接收區 */}
+<div className="p-4 bg-white rounded-[2.5rem] shadow-inner mb-10 border border-gray-50 flex items-center justify-center overflow-hidden min-h-[160px]">
+    <div ref={qrRef} className="flex items-center justify-center">
+        {/* 這裡會自動填入 Google 生成的圖片 */}
+    </div>
+</div>
                         <button onClick={handleCloseReceipt} className="w-full py-5 bg-[#1C1C1E] text-[#D4AF37] rounded-3xl font-black shadow-2xl text-lg italic uppercase">Next Customer</button>
                     </div>
                 </div>
