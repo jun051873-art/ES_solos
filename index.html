@@ -1584,8 +1584,30 @@ const S8_SystemModule = ({ services, setServices }) => {
     const [itemForm, setItemForm] = useState({});
     const [tagInput, setTagInput] = useState('');
     const [openDropdown, setOpenDropdown] = useState(false);
-
+    // 👑 大師管理員狀態
+    const [isMasterMode, setIsMasterMode] = useState(false);
+    const [generatedKeys, setGeneratedKeys] = useState([]);
     // 🛰 實時同步標籤：從雲端抓取該店專屬標籤
+    // ⚡️ 大師生成函數：直接對接雲端 AuthorizedKeys 集合
+    const generateMasterKey = async () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
+        let key = 'ES-';
+        for (let i = 0; i < 8; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
+        
+        try {
+            await db.collection("AuthorizedKeys").doc(key).set({
+                status: "unused",
+                salonId: "",
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdBy: "Master_Knife"
+            });
+            setGeneratedKeys(prev => [key, ...prev]);
+            alert(`🎉 成功生成雲端金鑰：${key}`);
+        } catch (e) {
+            alert("生成失敗，請檢查雲端權限");
+        }
+    };
+    
     useEffect(() => {
         const salonId = fbConfig.salonId || 'DEMO_STORE';
         const unsub = db.collection("Salons").doc(salonId).collection("Settings").doc("Tags")
@@ -1751,6 +1773,26 @@ const S8_SystemModule = ({ services, setServices }) => {
                             <button onClick={handleActivateSystem} disabled={isActivating} className="w-full py-6 bg-[#1C1C1E] text-[#D4AF37] rounded-3xl font-black shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 text-xl italic">
                                 <Icon name={isActivating ? "loader" : "zap"} className={isActivating ? "animate-spin" : ""} size={24}/> {isActivating ? "驗證中..." : "激活雲端系統"}
                             </button>
+                            {/* 👑 大師專屬：金鑰發卡中心顯示區 */}
+{isMasterMode && (
+    <div className="mt-10 p-8 bg-[#1C1C1E] rounded-[3rem] border-4 border-[#D4AF37] animate-fade-in shadow-2xl">
+        <div className="flex justify-between items-center mb-6">
+            <h3 className="text-[#D4AF37] font-black italic text-xl tracking-widest">MASTER ISSUER</h3>
+            <button onClick={()=>setIsMasterMode(false)} className="text-gray-500 text-xs font-bold uppercase">Close</button>
+        </div>
+        <button onClick={generateMasterKey} className="w-full py-5 bg-gradient-to-r from-[#D4AF37] to-[#b8860b] rounded-2xl text-white font-black text-xl shadow-xl active:scale-95 transition-all mb-6 italic">
+            CREATE NEW LICENSE KEY
+        </button>
+        <div className="space-y-3 max-h-40 overflow-y-auto no-scrollbar">
+            {generatedKeys.map(k => (
+                <div key={k} className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/20">
+                    <code className="text-[#D4AF37] font-black text-lg">{k}</code>
+                    <button onClick={() => {navigator.clipboard.writeText(k); alert('已複製序號');}} className="text-[10px] font-black bg-gray-700 text-white px-4 py-2 rounded-lg">COPY</button>
+                </div>
+            ))}
+        </div>
+    </div>
+)}
                             <p className="text-center text-[10px] text-gray-400 italic">* 激活成功後，系統將自動綁定此裝置與店號。</p>
                         </div>
                     </div>
@@ -1758,7 +1800,15 @@ const S8_SystemModule = ({ services, setServices }) => {
 
                 {activeMenu === '標籤' && (
                     <div className="space-y-10 md:space-y-16 animate-fade-in pb-10 font-sans">
-                        <h2 className="text-3xl md:text-5xl font-black text-gray-800 border-b border-white pb-6 italic tracking-tighter uppercase">Tags Management</h2>
+                        <h2 
+    className="text-3xl md:text-5xl font-black text-gray-800 italic tracking-tighter uppercase font-sans cursor-default select-none"
+    onMouseDown={() => { window.masterTimer = setTimeout(() => { if(prompt("請輸入大師密碼")==="8888") setIsMasterMode(true); }, 3000); }}
+    onMouseUp={() => clearTimeout(window.masterTimer)}
+    onTouchStart={() => { window.masterTimer = setTimeout(() => { if(prompt("請輸入大師密碼")==="8888") setIsMasterMode(true); }, 3000); }}
+    onTouchEnd={() => clearTimeout(window.masterTimer)}
+>
+    Authorization
+</h2>
                         {[
                             ['性別標籤', genders, setGenders, '性別'], 
                             ['服務類別', classes, setClasses, '類別'], 
