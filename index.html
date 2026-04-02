@@ -1699,12 +1699,16 @@ const S8_SystemModule = ({ services, setServices, products, setProducts }) => {
     };
 
     const handleDeleteItem = async (id, name) => {
-        if (window.confirm(`確定刪除「${name}」？`)) {
+        if (window.confirm(`確定要永久刪除「${name}」嗎？`)) {
             const salonId = fbConfig.salonId || 'DEMO_STORE';
-            if (itemTab === '服務') {
-                await db.collection("Salons").doc(salonId).collection("Services").doc(id).delete();
-            } else {
-                setProducts(products.filter(p => p.id !== id));
+            try {
+                // ✅ 關鍵修正：判斷目前在服務還是產品分頁，並從對應的雲端資料夾刪除
+                const collectionName = itemTab === '服務' ? "Services" : "Products";
+                await db.collection("Salons").doc(salonId).collection(collectionName).doc(id).delete();
+                
+                alert("已成功從雲端刪除！");
+            } catch (e) {
+                alert("刪除失敗，請檢查網路連線");
             }
         }
     };
