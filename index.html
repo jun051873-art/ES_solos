@@ -1003,9 +1003,7 @@ const S5_InventoryModule = () => {
     const [newVendor, setNewVendor] = useState('');
     const [newTag, setNewTag] = useState('');
 
-    const [items, setItems] = useState([
-        { id: '1', name: '超水感髮膜', vendor: '歐萊德', tag: '販賣品', stock: 24, cost: 450, price: 1200, color: '#D4AF37' }
-    ]);
+    const [items, setItems] = useState([]);
 
     const [history, setHistory] = useState([
         { date: '2026/03/19', time: '13:45', type: '系統', name: '庫存管理', qty: '-', operator: '小刀', note: '初始化成功' }
@@ -1407,9 +1405,7 @@ const S6_StaffModule = ({ staffData = [], setStaffData }) => {
 // --- S7: 支出模組 (全平台自適應版：Mac/iPad/手機全兼容) ---
 // ==========================================================
 const S7_ExpenseModule = () => {
-    const [expenses, setExpenses] = useState([
-        { id: '1', date: '2026-03-19', category: '店內雜支', amount: 500, note: '買衛生紙', staff: '小刀', person: '-' }
-    ]);
+    const [expenses, setExpenses] = useState([]);
     const [categories, setCategories] = useState(['店內雜支', '進貨支出', '員工借支', '其他']);
     const staffList = ['小刀', 'Eason', 'A-Lin'];
 
