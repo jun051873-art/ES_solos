@@ -1564,7 +1564,7 @@ const S7_ExpenseModule = () => {
 // ==========================================================
 // --- S8: 系統設定 (旗艦授權版：金鑰驗證 + 網址自動綁定 + 項目全同步) ---
 // ==========================================================
-const S8_SystemModule = ({ services, setServices }) => {
+const S8_SystemModule = ({ services, setServices, products, setProducts }) => {
     const [activeMenu, setActiveMenu] = useState('標籤');
     const [itemTab, setItemTab] = useState('服務');
     
@@ -1577,7 +1577,6 @@ const S8_SystemModule = ({ services, setServices }) => {
     const [genders, setGenders] = useState(['男生', '女生', '小孩', '長輩']);
     const [classes, setClasses] = useState(['洗髮', '剪髮', '燙髮', '染髮', '護理', '販賣']);
     const [payments, setPayments] = useState(['現金', 'LinePay', '街口', '信用卡']);
-    const [products, setProducts] = useState([]); 
 
     const [tagModal, setTagModal] = useState({ show: false, title: '', old: '', callback: null });
     const [itemModal, setItemModal] = useState({ show: false, data: null });
@@ -1728,13 +1727,17 @@ const S8_SystemModule = ({ services, setServices }) => {
             cat: itemTab === '服務' ? itemForm.cat : '販賣' 
         };
 
-        if (itemTab === '服務') {
-            await db.collection("Salons").doc(salonId).collection("Services").doc(dataToSave.id).set(dataToSave);
-        } else {
-            // ✅ 改成存入雲端的 Products 資料夾
-            await db.collection("Salons").doc(salonId).collection("Products").doc(dataToSave.id).set(dataToSave);
+        try {
+            if (itemTab === '服務') {
+                await db.collection("Salons").doc(salonId).collection("Services").doc(dataToSave.id).set(dataToSave);
+            } else {
+                // ✅ 關鍵：這行會把產品直接寫進雲端
+                await db.collection("Salons").doc(salonId).collection("Products").doc(dataToSave.id).set(dataToSave);
+            }
+            setItemModal({ show: false });
+        } catch (e) {
+            alert("雲端儲存失敗：" + e.message);
         }
-        setItemModal({ show: false });
     };
 
     return (
@@ -2014,9 +2017,15 @@ const HairSalonApp = () => {
         // 3. 監聽服務項目 (Services)
         const unsubServices = db.collection("Salons").doc(salonId).collection("Services")
             .onSnapshot(snap => {
-                
                 const data = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-                if(data.length > 0) setServiceList(data);
+                setServiceList(data); // ✅ 拿掉 if 判斷，空的時候也要更新
+            });
+
+        // 3.5 監聽產品項目 (Products)
+        const unsubProducts = db.collection("Salons").doc(salonId).collection("Products")
+            .onSnapshot(snap => {
+                const data = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                setProducts(data); // ✅ 拿掉 if 判斷
             });
 
         // 4. 監聽夥伴名單 (Staff)
@@ -2129,15 +2138,15 @@ const HairSalonApp = () => {
                     <div className="absolute -top-60 -right-60 w-[30rem] h-[30rem] bg-[#D4AF37]/10 blur-[150px] rounded-full pointer-events-none animate-pulse"></div>
                     
                     <div className="flex-1 overflow-y-auto no-scrollbar relative z-10">
-                        {activeTab === 's1' && <S1_OrderModule staffList={staffList} services={serviceList} onCheckout={onCheckout} setActiveTab={setActiveTab} onAddCustomer={onAddCustomer} customers={customers} />}
+                        {activeTab === 's1' && <S1_OrderModule staffList={staffList} services={serviceList} products={products} onCheckout={onCheckout} setActiveTab={setActiveTab} onAddCustomer={onAddCustomer} customers={customers} />}
                         {activeTab === 's2' && <S2_RecordTrackerModule records={records} />}
                         {activeTab === 's3' && <S3_ReportModule records={records} staffList={staffList} />}
                         {activeTab === 's4' && <S4_CustomerModule customers={customers} staffData={staffData} />}
                         {activeTab === 's5' && <S5_InventoryModule items={inventoryItems} onUpdateInventory={onUpdateInventory} />}
                         {activeTab === 's6' && <S6_StaffModule staffData={staffData} setStaffData={setStaffData} onUpdateStaff={onUpdateStaff} />}
                         {activeTab === 's7' && <S7_ExpenseModule expenses={expenses} onAddExpense={onAddExpense} />}
-                        {activeTab === 's8' && <S8_SystemModule services={serviceList} setServices={setServiceList} />}
-                    </div>
+                        {activeTab === 's8' && <S8_SystemModule services={serviceList} setServices={setServiceList} products={products} setProducts={setProducts} />}
+                        </div>
                 </div>
             </main>
         </div>
