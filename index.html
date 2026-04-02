@@ -1401,187 +1401,136 @@ const S6_StaffModule = ({ staffData = [], setStaffData }) => {
         </div>
     );
 };
-        // ==========================================================
-// --- S7: 支出模組 (修復新增標籤 + 雲端同步刪除版) ---
+    // ==========================================================
+// --- S7: 支出模組 (旗艦修復版：括號絕對對齊 + 標籤管理) ---
 // ==========================================================
-const S7_ExpenseModule = ({ expenses, onAddExpense }) => {
-    // 基礎類別設定
+const S7_ExpenseModule = ({ expenses, onAddExpense, staffList }) => {
     const [categories, setCategories] = useState(['店內雜支', '進貨支出', '員工借支', '其他']);
-    const staffList = ['小刀', 'Eason', 'A-Lin'];
-
     const [showAdd, setShowAdd] = useState(false);
     const [showTag, setShowTag] = useState(false);
-    const [editing, setEditing] = useState(null);
     const [openDropdown, setOpenDropdown] = useState(false);
     const [newTag, setNewTag] = useState('');
     const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], category: '店內雜支', amount: '', note: '', staff: '小刀', person: '-' });
 
     useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [showAdd, showTag, expenses]);
 
-    // ⚡️ 修正：真正的「新增標籤」邏輯
-    const handleConfirmNewTag = () => {
-        if (!newTag.trim()) return;
-        if (categories.includes(newTag)) {
-            alert("此類別已存在");
-            return;
-        }
-        setCategories([...categories, newTag]);
-        setNewTag('');
-        setShowTag(false); // 成功後關閉彈窗
-    };
-
-    // ⚡️ 儲存開單紀錄（連動雲端）
     const handleSave = async () => {
         if(!form.amount) return;
-        const data = { 
-            ...form, 
-            id: editing ? editing.id : `EXP-${Date.now()}`,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp() 
-        };
-        
-        try {
-            // ✅ 呼叫 HairSalonApp 傳進來的雲端儲存通道
-            await onAddExpense(data); 
-            setShowAdd(false); 
-            setEditing(null);
-            setForm({ date: new Date().toISOString().split('T')[0], category: '店內雜支', amount: '', note: '', staff: '小刀', person: '-' });
-        } catch (e) {
-            alert("雲端存檔失敗，請檢查網路");
-        }
-    };
-
-    // ⚡️ 真正的雲端刪除邏輯
-    const handleDelete = async (id) => {
-        if (window.confirm('確定要永久刪除此筆支出紀錄嗎？')) {
-            const salonId = JSON.parse(localStorage.getItem('salon_fb_config'))?.salonId || 'DEMO_STORE';
-            try {
-                // ✅ 直接去 Firebase 刪除本尊，不再只是刪除影子
-                await db.collection("Salons").doc(salonId).collection("Expenses").doc(id).delete();
-                alert("已成功從雲端移除");
-            } catch (e) {
-                alert("刪除失敗");
-            }
-        }
+        const data = { ...form, id: `EXP-${Date.now()}`, timestamp: firebase.firestore.FieldValue.serverTimestamp() };
+        await onAddExpense(data); 
+        setShowAdd(false);
+        setForm({ date: new Date().toISOString().split('T')[0], category: '店內雜支', amount: '', note: '', staff: '小刀', person: '-' });
     };
 
     return (
-        <div className="h-full flex flex-col gap-6 md:gap-10 animate-fade-in relative pb-10">
-            {/* 1. Header Section */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 shrink-0">
+        <div className="flex h-full w-full flex-col gap-10 animate-fade-in pb-10">
+            {/* 標題區域 */}
+            <div className="flex justify-between items-center px-4">
                 <div className="space-y-1">
-                    <h1 className="text-4xl md:text-7xl font-black text-gold-gradient tracking-tighter italic uppercase">s7 Expenses</h1>
-                    <p className="text-gray-400 font-bold text-[10px] uppercase tracking-[0.3em] ml-2 opacity-50 italic leading-none">Logistics Master</p>
+                    <h1 className="text-7xl font-black text-gold-gradient tracking-tighter italic uppercase leading-none">s7 支出</h1>
+                    <p className="text-gray-400 font-bold text-xs uppercase tracking-[0.3em] ml-2 opacity-50 italic">Logistics Master</p>
                 </div>
-                <div className="flex items-center gap-4 md:gap-8 w-full sm:w-auto justify-end">
-                    {/* ✅ 修正：新增標籤按鈕 */}
-                    <button onClick={() => setShowTag(true)} className="w-12 h-12 md:w-16 md:h-16 bg-white/80 rounded-full flex items-center justify-center text-gray-400 hover:text-blue-500 shadow-sm border border-white transition-all active:scale-90">
-                        <Icon name="tag" size={20}/>
-                    </button>
-                    <button onClick={() => { setEditing(null); setShowAdd(true); }} className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-full flex items-center justify-center text-[#D4AF37] shadow-xl border border-white active:scale-90 transition-all">
-                        <Icon name="plus" size={32}/>
-                    </button>
+                <div className="flex items-center gap-8">
+                    <button onClick={() => setShowTag(true)} className="w-20 h-20 bg-white/80 rounded-full flex items-center justify-center text-gray-400 shadow-sm border border-white active:scale-90 transition-all"><Icon name="tag" size={28}/></button>
+                    <button onClick={() => setShowAdd(true)} className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-[#D4AF37] shadow-xl border border-white active:scale-90 transition-all"><Icon name="plus" size={40}/></button>
                 </div>
             </div>
 
-            {/* 2. 主列表區域 */}
-            <div className="flex-1 liquid-glass p-4 md:p-12 flex flex-col min-h-0 relative bg-white/20 overflow-hidden">
-                <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-8 md:mb-14 border-b border-white/60 pb-8 md:pb-10 shrink-0 gap-4">
-                    <h2 className="text-2xl md:text-4xl font-black text-gray-800 tracking-tight italic">支出明細</h2>
-                    <div className="text-center md:text-right">
-                        <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest block mb-1">Current Balance</span>
-                        <span className="text-5xl md:text-7xl font-black text-gray-900 tracking-tighter italic leading-none">
-                            ${expenses.reduce((s,e)=>s+Number(e.amount),0).toLocaleString()}
-                        </span>
-                    </div>
+            {/* 列表區域 */}
+            <div className="flex-1 liquid-glass p-12 flex flex-col min-h-0 relative bg-white/20">
+                <div className="flex justify-between items-end mb-14 border-b border-white/60 pb-10 shrink-0">
+                    <h2 className="text-4xl font-black text-gray-800 italic">支出明細</h2>
+                    <span className="text-7xl font-black text-gray-900 tracking-tighter italic leading-none">${expenses.reduce((s,e)=>s+Number(e.amount),0).toLocaleString()}</span>
                 </div>
-
-                <div className="flex-1 overflow-y-auto space-y-6 md:space-y-8 pr-2 no-scrollbar">
+                <div className="flex-1 overflow-y-auto space-y-8 no-scrollbar pr-4">
                     {expenses.map(e => (
-                        <div key={e.id} className="bg-white/45 border border-white rounded-[2.5rem] md:rounded-[3.8rem] p-6 md:p-10 flex flex-col xl:flex-row justify-between items-center transition-all hover:bg-white/90 group shadow-sm gap-6 md:gap-10">
-                            <div className="flex items-center gap-6 md:gap-16 flex-1 w-full">
-                                <div className="text-center opacity-40 min-w-[70px] md:min-w-[80px] border-r border-white/50 pr-6 md:pr-10 shrink-0">
-                                    <div className="text-[9px] font-black uppercase mb-1">{e.date?.split('-')[2]} DAY</div>
-                                    <div className="text-xl md:text-3xl font-black tracking-tighter">{e.date?.split('-')[1]} MON</div>
+                        <div key={e.id} className="bg-white/45 border border-white rounded-[3.8rem] p-12 flex justify-between items-center shadow-sm">
+                            <div className="flex items-center gap-16 flex-1">
+                                <div className="text-center opacity-40 min-w-[90px] border-r border-white/50 pr-10">
+                                    <div className="text-xs font-black uppercase mb-1">{e.date?.split('-')[2]} DAY</div>
+                                    <div className="text-4xl font-black tracking-tighter">{e.date?.split('-')[1]} MON</div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex flex-wrap items-center gap-3 md:gap-5 mb-3">
-                                        <span className="px-4 py-1.5 bg-[#1C1C1E] rounded-full text-[9px] font-black text-[#D4AF37] shadow-lg tracking-widest uppercase shrink-0">{e.category}</span>
-                                        <h3 className="text-2xl md:text-4xl font-black text-[#1C1C1E] tracking-tight italic truncate">
-                                            {e.category === '員工借支' ? e.person : (e.note || '無備註')}
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-5 mb-4">
+                                        <span className="px-5 py-2 bg-[#1C1C1E] rounded-full text-[10px] font-black text-[#D4AF37] shadow-lg tracking-widest uppercase">{e.category}</span>
+                                        <h3 className="text-4xl font-black text-[#1C1C1E] tracking-tight italic truncate">
+                                            {e.category === '員工借支' ? `借支: ${e.person}` : (e.note || '無說明')}
                                         </h3>
                                     </div>
-                                    <p className="text-[11px] md:text-sm font-bold text-gray-400 tracking-tight ml-1 uppercase italic opacity-60">Staff: {e.staff}</p>
+                                    <p className="text-sm font-bold text-gray-400 tracking-tight ml-2 uppercase italic">Handler: {e.staff}</p>
                                 </div>
                             </div>
-
-                            <div className="flex items-center gap-6 md:gap-12 w-full xl:w-auto justify-between border-t border-white/50 xl:border-none pt-4 xl:pt-0 shrink-0">
-                                <b className="text-4xl md:text-6xl font-black text-gray-900 tracking-tighter italic">${Number(e.amount).toLocaleString()}</b>
-                                <div className="flex gap-2 md:gap-4 shrink-0">
-                                    <button onClick={() => { setEditing(e); setForm(e); setShowAdd(true); }} className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-full flex items-center justify-center shadow-lg text-gray-400 hover:text-blue-500 transition-all active:scale-90"><Icon name="edit-3" size={18}/></button>
-                                    {/* ✅ 修正：刪除按鈕對接 handleDelete */}
-                                    <button onClick={() => handleDelete(e.id)} className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-full flex items-center justify-center shadow-lg text-red-400 hover:text-red-500 transition-all active:scale-90"><Icon name="trash-2" size={18}/></button>
-                                </div>
-                            </div>
+                            <b className="text-6xl font-black text-gray-900 tracking-tighter italic shrink-0">${Number(e.amount).toLocaleString()}</b>
                         </div>
                     ))}
                 </div>
             </div>
 
-            {/* ✅ 修正：新增標籤彈窗 */}
+            {/* 制定標籤彈窗 */}
             {showTag && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-3xl z-[9999] flex items-center justify-center p-4">
-                    <div className="liquid-glass w-full max-w-md p-10 bg-[#F2F2F7] border-white shadow-2xl">
-                        <h3 className="text-xl font-black text-gray-900 mb-8 text-center italic uppercase">新增支出類別</h3>
-                        <input autoFocus className="input-ios w-full text-center text-2xl font-black italic bg-white mb-10 shadow-inner" 
-                            value={newTag} onChange={e=>setNewTag(e.target.value)} placeholder="例如: 維修費..." />
-                        <div className="flex gap-4">
-                            <button onClick={()=>setShowTag(false)} className="flex-1 py-4 font-black text-gray-400 uppercase">Cancel</button>
-                            <button onClick={handleConfirmNewTag} className="flex-[2] py-4 bg-[#1C1C1E] text-[#D4AF37] rounded-2xl text-lg font-black shadow-xl uppercase">Confirm</button>
+                <div className="fixed inset-0 bg-black/10 backdrop-blur-3xl z-[9000] flex items-center justify-center p-4">
+                    <div className="liquid-glass w-full max-w-2xl p-14 bg-[#F2F2F7]/95 shadow-2xl border-white">
+                        <h3 className="text-4xl font-black text-gray-800 mb-12 text-center italic uppercase">制定標籤</h3>
+                        <div className="flex gap-4 mb-12">
+                            <input className="input-ios text-2xl font-black italic shadow-inner bg-white flex-1" placeholder="輸入標籤..." value={newTag} onChange={e=>setNewTag(e.target.value)}/>
+                            <button onClick={()=>{if(newTag){setCategories([...categories, newTag]); setNewTag('');}}} className="px-12 bg-[#1C1C1E] text-[#D4AF37] rounded-[2rem] font-black text-lg shadow-xl">新增</button>
                         </div>
+                        <div className="flex flex-wrap gap-6 max-h-[40vh] overflow-y-auto pr-2 mb-12">
+                            {categories.map(c => (
+                                <div key={c} className="bg-white/90 px-10 py-5 rounded-[2.5rem] text-lg font-black italic flex items-center gap-8 border border-white">
+                                    {c} <button onClick={() => setCategories(categories.filter(x=>x!==c))} className="text-red-300"><Icon name="trash-2" size={20}/></button>
+                                </div>
+                            ))}
+                        </div>
+                        <button onClick={() => setShowTag(false)} className="w-full py-8 font-black text-gray-400 text-xl border-t border-white/50">Save & Close</button>
                     </div>
                 </div>
             )}
 
-            {/* 4. 新增支出彈窗 */}
+            {/* 新增支出彈窗 */}
             {showAdd && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[5000] flex items-center justify-center p-2 md:p-4">
-                    <div className="liquid-glass w-full max-w-2xl p-8 md:p-14 bg-[#F2F2F7] border-white shadow-2xl animate-pop max-h-[96vh] overflow-y-auto no-scrollbar">
-                        <h3 className="text-3xl md:text-4xl font-black text-gold-gradient mb-10 text-center italic uppercase">Record Expense</h3>
-                        <div className="space-y-6 md:space-y-10">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-10">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-400 ml-5 uppercase">日期 Date</label>
-                                    <input type="date" className="input-ios font-black shadow-sm" value={form.date} onChange={e=>setForm({...form, date:e.target.value})}/>
-                                </div>
-                                <div className="space-y-2 relative">
-                                    <label className="text-[10px] font-black text-gray-400 ml-5 uppercase">類別 Category</label>
-                                    <div onClick={() => setOpenDropdown(!openDropdown)} className="input-ios cursor-pointer flex justify-between items-center bg-white/90 shadow-sm font-black">
-                                        <span>{form.category}</span><Icon name="chevron-down" size={18} color="#D4AF37" />
+                <div className="fixed inset-0 bg-white/20 backdrop-blur-2xl z-[8000] flex items-center justify-center p-4">
+                    <div className="liquid-glass w-full max-w-3xl p-16 bg-[#F2F2F7]/95 border-white shadow-2xl animate-pop">
+                        <h3 className="text-5xl font-black text-gold-gradient mb-14 text-center italic uppercase">New Record</h3>
+                        <div className="space-y-12">
+                            <div className="grid grid-cols-2 gap-10">
+                                <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 ml-6 uppercase italic">Date</label>
+                                    <input type="date" className="input-ios text-xl font-black" value={form.date} onChange={e=>setForm({...form, date:e.target.value})}/></div>
+                                <div className="space-y-3 relative">
+                                    <label className="text-[11px] font-black text-gray-400 ml-6 uppercase italic">Category</label>
+                                    <div onClick={() => setOpenDropdown(!openDropdown)} className="input-ios flex justify-between items-center cursor-pointer bg-white text-xl font-black italic shadow-sm">
+                                        <span>{form.category}</span><Icon name="chevron-down" size={24} color="#D4AF37" />
                                     </div>
                                     {openDropdown && (
-                                        <div className="crystal-menu shadow-2xl">
+                                        <div className="crystal-menu shadow-2xl z-[8500]">
                                             {categories.map(c => (
-                                                <div key={c} onClick={() => { setForm({...form, category: c}); setOpenDropdown(false); }} className={`crystal-option ${form.category === c ? 'selected' : ''}`}>{c}</div>
+                                                <div key={c} onClick={() => { setForm({...form, category: c}); setOpenDropdown(false); }} className="crystal-option text-lg">{c}</div>
                                             ))}
                                         </div>
                                     )}
                                 </div>
                             </div>
-                            
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-10">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-400 ml-5 uppercase">金額 Amount</label>
-                                    <input type="number" className="input-ios text-3xl md:text-4xl font-black text-[#D4AF37] bg-white shadow-inner" value={form.amount} onChange={e=>setForm({...form, amount:e.target.value})} placeholder="0"/>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-400 ml-5 uppercase">說明 Memo</label>
-                                    <input className="input-ios font-black text-sm bg-white shadow-sm" value={form.note} onChange={e=>setForm({...form, note:e.target.value})} placeholder="事由說明..."/>
-                                </div>
+                            <div className="grid grid-cols-2 gap-10">
+                                <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 ml-6 uppercase italic">Handler</label>
+                                    <select className="input-ios text-lg font-black h-[68px] bg-white" value={form.staff} onChange={e=>setForm({...form, staff:e.target.value})}>{staffList.map(s=><option key={s}>{s}</option>)}</select></div>
+                                {form.category === '員工借支' && (
+                                    <div className="space-y-3 animate-fade-in"><label className="text-[11px] font-black text-red-500 ml-6 uppercase italic tracking-widest">Select Borrower</label>
+                                        <select className="input-ios border-red-200 text-red-600 font-black h-[68px] bg-white shadow-sm" value={form.person} onChange={e=>setForm({...form, person:e.target.value})}>
+                                            <option value="-">選擇夥伴...</option>
+                                            {staffList.map(s=><option key={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
-
-                            <div className="flex gap-4 md:gap-8 pt-6 md:pt-10">
-                                <button onClick={() => setShowAdd(false)} className="flex-1 py-5 md:py-6 font-black text-gray-400 uppercase italic transition-colors">Cancel</button>
-                                <button onClick={handleSave} className="flex-[2] py-5 md:py-6 bg-[#1C1C1E] rounded-[2.5rem] text-[#D4AF37] text-xl md:text-2xl font-black shadow-2xl active:scale-95 transition-all uppercase italic">Confirm Save</button>
+                            <div className="grid grid-cols-2 gap-10">
+                                <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 ml-6 uppercase italic">Amount</label>
+                                    <input type="number" className="input-ios text-5xl font-black text-[#D4AF37] bg-white py-6 shadow-inner" value={form.amount} onChange={e=>setForm({...form, amount:e.target.value})} placeholder="0"/></div>
+                                <div className="space-y-3"><label className="text-[11px] font-black text-gray-400 ml-6 uppercase italic">Memo</label>
+                                    <input className="input-ios text-lg font-black shadow-sm bg-white py-6" value={form.note} onChange={e=>setForm({...form, note:e.target.value})} placeholder="說明..."/></div>
+                            </div>
+                            <div className="flex gap-8 pt-10">
+                                <button onClick={() => setShowAdd(false)} className="flex-1 py-8 font-black text-gray-400 text-2xl uppercase">Cancel</button>
+                                <button onClick={handleSave} className="flex-[2] py-8 bg-[#1C1C1E] text-[#D4AF37] text-3xl font-black shadow-2xl active:scale-95 italic">Confirm Save</button>
                             </div>
                         </div>
                     </div>
@@ -1589,7 +1538,7 @@ const S7_ExpenseModule = ({ expenses, onAddExpense }) => {
             )}
         </div>
     );
-};
+};    
 // ==========================================================
 // --- S8: 系統設定 (旗艦授權版：金鑰驗證 + 網址自動綁定 + 項目全同步) ---
 // ==========================================================
@@ -2177,7 +2126,7 @@ const HairSalonApp = () => {
                         {activeTab === 's4' && <S4_CustomerModule customers={customers} staffData={staffData} />}
                         {activeTab === 's5' && <S5_InventoryModule items={inventoryItems} onUpdateInventory={onUpdateInventory} />}
                         {activeTab === 's6' && <S6_StaffModule staffData={staffData} setStaffData={setStaffData} onUpdateStaff={onUpdateStaff} />}
-                        {activeTab === 's7' && <S7_ExpenseModule expenses={expenses} onAddExpense={onAddExpense} />}
+                        {activeTab === 's7' && <S7_ExpenseModule expenses={expenses} onAddExpense={onAddExpense} staffList={staffList} />}
                         {activeTab === 's8' && <S8_SystemModule services={serviceList} setServices={setServiceList} products={products} setProducts={setProducts} />}
                         </div>
                 </div>
