@@ -1724,12 +1724,15 @@ const S8_SystemModule = ({ services, setServices }) => {
             cost: Number(itemForm.cost) || 0,
             commA: Number(itemForm.commA) || 0,
             commB: Number(itemForm.commB) || 0,
-            comm: Number(itemForm.comm) || 0
+            comm: Number(itemForm.comm) || 0,
+            cat: itemTab === '服務' ? itemForm.cat : '販賣' 
         };
+
         if (itemTab === '服務') {
             await db.collection("Salons").doc(salonId).collection("Services").doc(dataToSave.id).set(dataToSave);
         } else {
-            setProducts(prev => itemModal.data ? prev.map(p => p.id === dataToSave.id ? dataToSave : p) : [...prev, dataToSave]);
+            // ✅ 改成存入雲端的 Products 資料夾
+            await db.collection("Salons").doc(salonId).collection("Products").doc(dataToSave.id).set(dataToSave);
         }
         setItemModal({ show: false });
     };
@@ -1978,6 +1981,7 @@ const HairSalonApp = () => {
     const [records, setRecords] = useState([]);
     const [customers, setCustomers] = useState([]);
     const [serviceList, setServiceList] = useState([]);
+    const [products, setProducts] = useState([]);
     const [staffData, setStaffData] = useState([]);
     // ⚡️ 補回：庫存與支出狀態
     const [inventoryItems, setInventoryItems] = useState([]);
@@ -2010,6 +2014,7 @@ const HairSalonApp = () => {
         // 3. 監聽服務項目 (Services)
         const unsubServices = db.collection("Salons").doc(salonId).collection("Services")
             .onSnapshot(snap => {
+                
                 const data = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
                 if(data.length > 0) setServiceList(data);
             });
@@ -2041,7 +2046,7 @@ const HairSalonApp = () => {
 
         return () => { 
             unsubRecords(); unsubCustomers(); unsubServices(); 
-            unsubStaff(); unsubInv(); unsubExp(); 
+            unsubStaff(); unsubInv(); unsubExp(); unsubProducts();
         };
     }, []);
 
