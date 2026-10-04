@@ -226,7 +226,7 @@ export function checkout(db, form) {
   fail(walletUsed<=totals.revenue,"儲值扣款不可超過消費金額");
   if(walletUsed){fail(customer,"儲值付款需選擇會員");ensureWalletDate(db,customer.id,form.date);fail(walletBalance(db,customer.id)>=walletUsed,"儲值餘額不足");}
   const externalPaid=totals.revenue-walletUsed;
-  if (db.settings.cashPayments.includes(form.payment))
+  if (externalPaid > 0 && db.settings.cashPayments.includes(form.payment))
     fail(
       money(form.cashIn, "收現金額") >= externalPaid,
       "收現不足，請核對金額",
@@ -258,10 +258,10 @@ export function checkout(db, form) {
     payment: form.payment,
     walletUsed, externalPaid,
     cashIn: db.settings.cashPayments.includes(form.payment)
-      ? Number(form.cashIn)
+      ? Number(form.cashIn || 0)
       : null,
     change: db.settings.cashPayments.includes(form.payment)
-      ? Number(form.cashIn) - externalPaid
+      ? Number(form.cashIn || 0) - externalPaid
       : 0,
     items,
     ...totals,

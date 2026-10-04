@@ -691,7 +691,7 @@ function Order() {
               </button>
             ))}
           </PearlGroup>
-          {db.settings.cashPayments.includes(payment) && (
+          {externalDue>0 && db.settings.cashPayments.includes(payment) && (
             <div className="form-grid cash-row">
               <Input
                 label="收現金額"
