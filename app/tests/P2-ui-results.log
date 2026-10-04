@@ -1,0 +1,11 @@
+PASS 人員新增與持久化
+PASS 服務與商品設定
+PASS 同名顧客建立
+PASS 結帳750算例、會員連結、販賣扣庫存
+PASS 重新開啟、顧客改名及歷史連動
+PASS 查單日期與報表分類金額
+PASS 進貨、耗用與尾款不重複列支
+PASS 薪資草稿、確認、已付與支出
+PASS 備份下載、跨專案拒絕、還原一致
+PASS 768平板與390手機八頁／長彈窗
+ALL UI CHECKS PASSED 0 page errors
